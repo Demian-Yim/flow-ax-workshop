@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FLOW~ AX Workshop Ï∞∏Í????Ä?úÎ≥¥?????§ÌîÑÎ¶∞Ìä∏ Í∞Ä?¥Îìú, ?Ä ?úÎèô, Í≤∞Í≥ºÎ¨??úÏ∂ú">
+  <title>Ï∞∏Í????Ä?úÎ≥¥??| FLOW~ AX Workshop</title>
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>?åä</text></svg>">
+</head>
+<body>
+  <!-- ?ê‚ïê??Navbar ?ê‚ïê??-->
+  <nav class="navbar" id="navbar">
+    <div class="navbar__brand">
+      <div class="navbar__logo">F~</div>
+      <div>
+        <div class="navbar__title">FLOW~ AX WORKSHOP 2026</div>
+        <div class="navbar__subtitle" id="modeDisplay">PARTICIPANT Î™®Îìú ?úÏÑ±??/div>
+      </div>
+    </div>
+    <div class="navbar__actions">
+      <button class="btn btn-ghost btn-sm" id="dashboardTab" style="border-color: var(--c-primary); color: var(--c-primary-h);">?Ä?úÎ≥¥??/button>
+      <button class="btn btn-ghost btn-sm" id="galleryTab" onclick="window.location.href='gallery.html'">?é® Í∞§Îü¨Î¶?/button>
+      <button class="btn btn-ghost btn-sm" onclick="window.location.href='index.html'">?è† Ï¥àÍ∏∞?îÎ©¥</button>
+      <button class="btn btn-sm" style="background:var(--c-danger);color:white;" id="helpBtn">?ÑÏ?Îß???/button>
+    </div>
+  </nav>
+
+  <!-- ?ê‚ïê??Dashboard Layout ?ê‚ïê??-->
+  <div class="dashboard-layout">
+    <div class="container">
+
+      <!-- ?ê‚ïê??Phase 1: Team Setup (shown first) ?ê‚ïê??-->
+      <div id="teamSetupPhase">
+        <div class="team-setup">
+          <h1 class="team-setup__title">?ë• ?Ä ?§Ï†ï</h1>
+          <p class="team-setup__desc">?Ä???ùÏÑ±?òÍ±∞??Í∏∞Ï°¥ ?Ä???©Î•ò?òÏÑ∏??/p>
+
+          <div class="team-setup__options">
+            <div class="team-option" id="createTeamOption">
+              <div class="team-option__icon">?Üï</div>
+              <div class="team-option__title">???Ä ÎßåÎì§Í∏?/div>
+              <div class="team-option__desc">?Ä?•Ïù¥ ?òÏñ¥ ?àÎ°ú???Ä??ÎßåÎì≠?àÎã§</div>
+            </div>
+            <div class="team-option" id="joinTeamOption">
+              <div class="team-option__icon">?§ù</div>
+              <div class="team-option__title">Í∏∞Ï°¥ ?Ä ?©Î•ò</div>
+              <div class="team-option__desc">?Ä PIN???ÖÎ†•?òÏó¨ ?Ä???©Î•ò?©Îãà??/div>
+            </div>
+          </div>
+
+          <!-- Create Team Form -->
+          <div class="glass-card hidden" id="createTeamForm">
+            <h3 style="margin-bottom: var(--s-lg);">?Üï ???Ä ÎßåÎì§Í∏?/h3>
+            <div class="form-group">
+              <label>?Ä ?¥Î¶Ñ</label>
+              <input type="text" id="newTeamName" placeholder="?? AI Pioneers">
+            </div>
+            <div class="form-group">
+              <label>???¥Î¶Ñ (?âÎÑ§??</label>
+              <input type="text" id="newMemberName" placeholder="?? ÍπÄÏ≤†Ïàò">
+            </div>
+            <button class="btn btn-primary" id="confirmCreateTeam" style="width:100%;">?Ä ?ùÏÑ±?òÍ∏∞ ??</button>
+          </div>
+
+          <!-- Join Team Form -->
+          <div class="glass-card hidden" id="joinTeamForm">
+            <h3 style="margin-bottom: var(--s-lg);">?§ù Í∏∞Ï°¥ ?Ä ?©Î•ò</h3>
+            <div class="form-group">
+              <label>?Ä PIN (4?êÎ¶¨)</label>
+              <input type="text" id="teamPin" maxlength="4" placeholder="1234">
+            </div>
+            <div class="form-group">
+              <label>???¥Î¶Ñ (?âÎÑ§??</label>
+              <input type="text" id="joinMemberName" placeholder="?? ÍπÄÏ≤†Ïàò">
+            </div>
+            <button class="btn btn-primary" id="confirmJoinTeam" style="width:100%;">?Ä ?©Î•ò?òÍ∏∞ ?§ù</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ?ê‚ïê??Phase 2: Sprint Dashboard (shown after team setup) ?ê‚ïê??-->
+      <div id="sprintPhase" class="hidden">
+        <!-- Welcome Banner -->
+        <div class="welcome-banner">
+          <div class="welcome-banner__info">
+            <h2 id="workshopTitle">?åÌÅ¨???¥Î¶Ñ</h2>
+            <div class="welcome-banner__meta">
+              <span class="badge badge-primary" id="workshopTypeBadge">AI ?¥Ïª§??/span>
+              <span id="teamDisplay">?Ä: -</span>
+              <span>PIN: <strong id="teamPinDisplay">-</strong></span>
+            </div>
+          </div>
+          <div>
+            <button class="btn btn-ghost btn-sm" id="shareTeamPin">?ìã ?Ä PIN Í≥µÏú†</button>
+          </div>
+        </div>
+
+        <!-- Sprint Guide -->
+        <div class="sprint-section">
+          <div class="sprint-header">
+            <h2>?èÉ ?§ÌîÑÎ¶∞Ìä∏ ÏßÑÌñâ</h2>
+            <div class="sprint-progress">
+              <span class="sprint-progress__text" id="progressText">Step 1 / 5</span>
+              <div class="progress-bar" style="width:200px;">
+                <div class="progress-bar__fill" id="progressFill" style="width:20%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Steps Timeline -->
+          <div class="steps-timeline" id="stepsTimeline">
+            <!-- Dynamically generated -->
+          </div>
+        </div>
+
+        <!-- Submission Section -->
+        <div class="submission-section" id="submissionSection">
+          <h2>?ì¶ Í≤∞Í≥ºÎ¨??úÏ∂ú</h2>
+          <div class="submission-grid">
+            <div class="form-group">
+              <label>?úÎπÑ???ÑÎ°ú?ùÌä∏ ?¥Î¶Ñ</label>
+              <input type="text" id="subServiceName" placeholder="?? AI ?úÎ??àÏù¥??Î¶¨Îçî??ÏßÑÎã®">
+            </div>
+            <div class="form-group">
+              <label>?úÏ§Ñ ?åÍ∞ú</label>
+              <input type="text" id="subTagline" placeholder="?? ?§Î¨∏ÏßÄÍ∞Ä ?ÑÎãå, ?πÏã†???§Ï†ú Î¶¨Îçî??ùÑ ÏßÑÎã®?©Îãà??>
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label>?úÎπÑ???§Î™Ö</label>
+              <textarea id="subDescription" placeholder="?úÎπÑ?§Ïùò Î™©Ï†Å, ?Ä?? ?µÏã¨ Í∏∞Îä•???§Î™Ö?¥Ï£º?∏Ïöî"></textarea>
+            </div>
+            <div class="form-group">
+              <label>?îó ??ÎßÅÌÅ¨ (Î∞∞Ìè¨??URL)</label>
+              <input type="url" id="subAppLink" placeholder="https://your-app.vercel.app">
+            </div>
+            <div class="form-group">
+              <label>?îó ?åÍ∞ú ?òÏù¥ÏßÄ / ?úÎî© ?òÏù¥ÏßÄ</label>
+              <input type="url" id="subLandingLink" placeholder="https://your-landing.vercel.app">
+            </div>
+            <div class="form-group">
+              <label>?íª AI Studio / ÏΩîÎìú ÎßÅÌÅ¨</label>
+              <input type="url" id="subCodeLink" placeholder="https://aistudio.google.com/...">
+            </div>
+          </div>
+          <button class="btn btn-primary btn-lg" id="submitProjectBtn" style="width:100%; margin-top: var(--s-lg);">
+            ?ì§ Í≤∞Í≥ºÎ¨??úÏ∂ú?òÍ∏∞
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <p style="margin-bottom: 4px;"><span class="footer__company">FLOW~ AX?îÏûê?∏Ïó∞Íµ¨ÏÜå</span></p>
+        <p class="footer__tagline">?¨ÎûåÍ≥??ºÏùò ?êÎ¶Ñ???îÏûê?∏Ìï©?àÎã§</p>
+        <p style="margin-top: 6px;"><a href="https://flowdesign.ai.kr" target="_blank" style="color: var(--c-primary-h); font-size: 0.8rem;">flowdesign.ai.kr</a></p>
+        <p style="margin-top: 10px; font-size: 0.65rem; color: rgba(255,255,255,0.15);">¬© 2026 FLOW~ AX?îÏûê?∏Ïó∞Íµ¨ÏÜå. All rights reserved.</p>
+      </div>
+    </footer>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

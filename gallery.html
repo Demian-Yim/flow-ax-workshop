@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FLOW~ AX Workshop 명예???�당 ??참�??� ?�로?�트 ?�시, ?�표, ?�드�?>
+  <title>명예???�당 | FLOW~ AX Workshop</title>
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/gallery.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>?��</text></svg>">
+</head>
+<body>
+  <!-- ?�═??Navbar ?�═??-->
+  <nav class="navbar" id="navbar">
+    <div class="navbar__brand">
+      <div class="navbar__logo">F~</div>
+      <div>
+        <div class="navbar__title">FLOW~ AX WORKSHOP 2026</div>
+        <div class="navbar__subtitle">GALLERY 모드 ?�성??/div>
+      </div>
+    </div>
+    <div class="navbar__actions">
+      <button class="btn btn-ghost btn-sm" onclick="window.location.href='dashboard.html'">?�?�보??/button>
+      <button class="btn btn-sm" style="background: var(--c-accent); color: white; border-color: var(--c-accent);">?�� 갤러�?/button>
+      <button class="btn btn-ghost btn-sm" onclick="window.location.href='index.html'">?�� 초기?�면</button>
+      <button class="btn btn-sm" style="background:var(--c-danger);color:white;" id="helpBtn">?��?�???/button>
+    </div>
+  </nav>
+
+  <!-- ?�═??Gallery Layout ?�═??-->
+  <div class="gallery-layout">
+    <div class="container">
+      <!-- Gallery Hero -->
+      <div class="gallery-hero">
+        <div class="gallery-hero__badge">??최종 ?�시??/div>
+        <h1>명예??<span>?�당</span></h1>
+        <p class="gallery-hero__desc">
+          치열???�프린트 ?�에 ?�생???�신?�인 ?�루?�을 만나보세??<br>
+          ?�료?�의 ?�정???�표?�고 ?�뜻???�드백을 ?�겨주세??
+        </p>
+      </div>
+
+      <!-- Filters -->
+      <div class="gallery-filters" id="galleryFilters">
+        <button class="filter-btn active" data-filter="all">?�체</button>
+        <button class="filter-btn" data-filter="hackathon">?�� AI ?�커??/button>
+        <button class="filter-btn" data-filter="vibe-coding">?�� 바이브코??/button>
+        <button class="filter-btn" data-filter="ax-redesign">?�� AX 리디?�인</button>
+        <button class="filter-btn" data-filter="top">?�� ?�표??/button>
+      </div>
+
+      <!-- Project Grid -->
+      <div class="gallery-grid" id="galleryGrid">
+        <!-- Dynamically generated -->
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state hidden" id="galleryEmpty">
+        <div class="empty-state__icon">?��</div>
+        <div class="empty-state__title">?�직 ?�시???�로?�트가 ?�습?�다</div>
+        <p>?�?�이 결과물을 ?�출?�면 ?�기???�시?�니??</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <p style="margin-bottom: 4px;"><span class="footer__company">FLOW~ AX?�자?�연구소</span></p>
+        <p class="footer__tagline">?�람�??�의 ?�름???�자?�합?�다</p>
+        <p style="margin-top: 6px;"><a href="https://flowdesign.ai.kr" target="_blank" style="color: var(--c-primary-h); font-size: 0.8rem;">flowdesign.ai.kr</a></p>
+        <p style="margin-top: 10px; font-size: 0.65rem; color: rgba(255,255,255,0.15);">© 2026 FLOW~ AX?�자?�연구소. All rights reserved.</p>
+      </div>
+    </footer>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/gallery.js"></script>
+</body>
+</html>

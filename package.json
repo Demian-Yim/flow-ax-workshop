@@ -1,0 +1,13 @@
+{
+  "name": "flow-ax-workshop",
+  "version": "1.0.0",
+  "description": "FLOW~ AX Workshop Platform — AI와 함께 일의 흐름을 디자인하는 실전 워크샵 플랫폼",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx live-server --port=3000 --no-browser",
+    "start": "npx live-server --port=3000"
+  },
+  "keywords": ["workshop", "hackathon", "vibe-coding", "ax-redesign", "ai"],
+  "author": "FLOW~ AX디자인연구소",
+  "license": "MIT"
+}

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FLOW~ AX Workshop 관리자 ?�?�보?????�크???�성, ?� 모니?�링, ?�스??관�?>
+  <title>관리자 ?�?�보??| FLOW~ AX Workshop</title>
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>?��</text></svg>">
+</head>
+<body>
+  <!-- ?�═??Navbar ?�═??-->
+  <nav class="navbar" id="navbar">
+    <div class="navbar__brand">
+      <div class="navbar__logo">F~</div>
+      <div>
+        <div class="navbar__title">FLOW~ AX WORKSHOP 2026</div>
+        <div class="navbar__subtitle" id="roleDisplay">ADMIN 모드 ?�성??/div>
+      </div>
+    </div>
+    <div class="navbar__actions">
+      <button class="btn btn-ghost btn-sm" onclick="window.location.href='index.html'">?�� 초기?�면</button>
+      <button class="btn btn-sm" style="background:var(--c-danger);color:white;" id="helpBtn">?��?�???/button>
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">로그?�웃</button>
+    </div>
+  </nav>
+
+  <!-- ?�═??Admin Layout ?�═??-->
+  <div class="admin-layout">
+    <div class="container">
+      <!-- Header -->
+      <div class="admin-header">
+        <div class="admin-header__icon">?�️</div>
+        <div class="admin-header__info">
+          <h1>?�스???�정</h1>
+          <div class="admin-header__meta">
+            <span class="badge badge-primary" id="roleBadge">관리자 권한 ?�성??/span>
+            <span id="userEmail">super_admin@system.local</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" id="adminTabs">
+        <button class="tab active" data-tab="workshops">1. ?�크???�래?? 관�?/button>
+        <button class="tab" data-tab="monitoring">2. ?� 모니?�링</button>
+        <button class="tab" data-tab="system">3. ?�스???�이??/button>
+      </div>
+
+      <!-- ?�═??Tab 1: Workshop Management ?�═??-->
+      <div class="tab-content active" id="tab-workshops">
+        <!-- Stats -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-card__value" id="statWorkshops">0</div>
+            <div class="stat-card__label">?�체 ?�크??/div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__value" id="statTeams">0</div>
+            <div class="stat-card__label">?�체 ?�</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__value" id="statMembers">0</div>
+            <div class="stat-card__label">?�체 참�???/div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__value" id="statSubmissions">0</div>
+            <div class="stat-card__label">?�출???�로?�트</div>
+          </div>
+        </div>
+
+        <!-- Create Workshop -->
+        <div class="glass-card" style="margin-bottom: var(--s-xl);">
+          <h2 style="margin-bottom: var(--s-lg);">?????�크???�성</h2>
+          
+          <div class="form-group">
+            <label>?�크???�름</label>
+            <input type="text" id="workshopName" placeholder="?? 2026 ?�반�?AI ?�커??>
+          </div>
+
+          <div class="form-group">
+            <label>?�크???�형</label>
+            <div class="type-selector" id="typeSelector">
+              <div class="type-card" data-type="hackathon">
+                <div class="type-card__icon">?��</div>
+                <div class="type-card__name">AI ?�커??/div>
+                <div class="type-card__desc">5?�계 ?�프린트<br>?�해?�스케치→결정?�프로토?�?�→?�스??/div>
+              </div>
+              <div class="type-card" data-type="vibe-coding">
+                <div class="type-card__icon">?��</div>
+                <div class="type-card__name">바이브코??/div>
+                <div class="type-card__desc">4?�계 ?�프린트<br>?�이?�어?�프롬프?�→빌드?�공??/div>
+              </div>
+              <div class="type-card" data-type="ax-redesign">
+                <div class="type-card__icon">?��</div>
+                <div class="type-card__name">AX 직무 리디?�인</div>
+                <div class="type-card__desc">4?�계 ?�프린트<br>AS-IS?�AI매핑?�TO-BE?�실??/div>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-lg" id="createWorkshopBtn" style="width:100%;">
+            ?? ?�크???�성?�기
+          </button>
+        </div>
+
+        <!-- Workshop List -->
+        <h2 style="margin-bottom: var(--s-md);">?�� ?�크??목록</h2>
+        <div class="workshop-list" id="workshopList">
+          <div class="empty-state">
+            <div class="empty-state__icon">?��</div>
+            <div class="empty-state__title">?�직 ?�크?�이 ?�습?�다</div>
+            <p>?�에?????�크?�을 ?�성?�주?�요.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ?�═??Tab 2: Team Monitoring ?�═??-->
+      <div class="tab-content" id="tab-monitoring">
+        <!-- Workshop Selector -->
+        <div class="form-group" style="max-width: 400px; margin-bottom: var(--s-xl);">
+          <label>모니?�링???�크???�택</label>
+          <select id="monitorWorkshopSelect">
+            <option value="">?�크?�을 ?�택?�세??/option>
+          </select>
+        </div>
+
+        <!-- Monitoring Header -->
+        <div class="glass-card" id="monitoringHeader" style="display:none; margin-bottom: var(--s-xl);">
+          <div class="flex-between">
+            <div>
+              <h2 id="monitorWorkshopName" style="display: flex; align-items: center; gap: 8px;">
+                <span>??/span> ?�크???�름
+              </h2>
+              <p style="color: var(--t-secondary); font-size: var(--fs-sm); margin-top: 4px;">?� 모니?�링 ?�?�보??/p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team Table -->
+        <div class="glass-card" id="teamTableWrapper" style="display:none; overflow-x:auto;">
+          <table class="monitoring-table">
+            <thead>
+              <tr>
+                <th>?��?/th>
+                <th>?�??/th>
+                <th>?�재 ?�계</th>
+                <th>진행�?/th>
+                <th>?�출�?/th>
+                <th>AI Studio</th>
+                <th>관�?/th>
+              </tr>
+            </thead>
+            <tbody id="teamTableBody">
+            </tbody>
+          </table>
+        </div>
+
+        <div class="empty-state" id="monitoringEmpty">
+          <div class="empty-state__icon">?��</div>
+          <div class="empty-state__title">?�크?�을 ?�택?�세??/div>
+          <p>모니?�링???�크?�을 ???�롭?�운?�서 ?�택?�주?�요.</p>
+        </div>
+      </div>
+
+      <!-- ?�═??Tab 3: System Data ?�═??-->
+      <div class="tab-content" id="tab-system">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-card__value">?��</div>
+            <div class="stat-card__label">?�스???�태: ?�상</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__value" id="sysWorkshopCount">0</div>
+            <div class="stat-card__label">?�크????/div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card__value" id="sysTeamCount">0</div>
+            <div class="stat-card__label">?� ??/div>
+          </div>
+        </div>
+
+        <div class="glass-card" style="margin-bottom: var(--s-lg);">
+          <h2 style="margin-bottom: var(--s-lg);">?�� ?�이??관�?/h2>
+          <div style="display: flex; gap: var(--s-md); flex-wrap: wrap;">
+            <button class="btn btn-secondary" id="exportDataBtn">?�� JSON ?�이???�보?�기</button>
+            <button class="btn btn-ghost" id="backupBtn">?�� ?�체 백업</button>
+            <button class="btn btn-accent" id="resetBtn">?�️ ?�이??초기??/button>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h2 style="margin-bottom: var(--s-lg);">?�� ?�스???�이??뷰어</h2>
+          <pre id="systemDataView" style="background: rgba(0,0,0,0.3); padding: var(--s-lg); border-radius: var(--r-md); overflow-x: auto; font-size: var(--fs-xs); max-height: 400px; overflow-y: auto; color: var(--c-secondary-h);">
+?�이?��? 불러?�려�??�의 "JSON ?�이???�보?�기" 버튼???�릭?�세??
+          </pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <p style="margin-bottom: 4px;"><span class="footer__company">FLOW~ AX?�자?�연구소</span></p>
+        <p class="footer__tagline">?�람�??�의 ?�름???�자?�합?�다</p>
+        <p style="margin-top: 6px;"><a href="https://flowdesign.ai.kr" target="_blank" style="color: var(--c-primary-h); font-size: 0.8rem;">flowdesign.ai.kr</a></p>
+        <p style="margin-top: 10px; font-size: 0.65rem; color: rgba(255,255,255,0.15);">© 2026 FLOW~ AX?�자?�연구소. All rights reserved.</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ?�═??Toast Container ?�═??-->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
