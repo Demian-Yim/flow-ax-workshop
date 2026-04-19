@@ -1217,10 +1217,10 @@ body.noir-body {
 .wordmark {
   margin: 0;
   font-family: var(--display);
-  font-weight: 500;
-  font-size: clamp(64px, 14vw, 260px);
-  line-height: 0.88;
-  letter-spacing: -0.05em;
+  font-weight: 600;
+  font-size: clamp(52px, 11vw, 200px);
+  line-height: 0.9;
+  letter-spacing: -0.045em;
   color: var(--paper);
   display: flex;
   flex-direction: column;
@@ -1236,9 +1236,11 @@ body.noir-body {
   padding-left: 0.02em;
 }
 .wordmark__row--outline {
-  -webkit-text-stroke: 1.5px var(--paper);
+  -webkit-text-stroke: 2.5px var(--paper);
   -webkit-text-fill-color: transparent;
   color: transparent;
+  font-weight: 700;
+  letter-spacing: -0.04em;
 }
 
 .hero--wordmark .hero__lede {
@@ -1360,29 +1362,34 @@ body.noir-body {
   margin: 0 auto;
 }
 .service-block {
-  padding: var(--sp-10) var(--gutter);
+  padding: var(--sp-8) var(--gutter);
   max-width: var(--max);
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 160px 1fr;
-  gap: var(--sp-7);
+  grid-template-columns: 80px 1fr;
+  grid-template-areas:
+    "num title"
+    ".   detail";
+  gap: var(--sp-3) var(--sp-5);
   align-items: start;
   border-top: 1px solid var(--line);
 }
 .service-block__num {
+  grid-area: num;
   font-family: var(--mono);
-  font-size: 14px;
-  letter-spacing: 0.12em;
+  font-size: 13px;
+  letter-spacing: 0.14em;
   color: var(--mute);
-  padding-top: 18px;
+  padding-top: 14px;
 }
 .service-block__title {
-  margin: 0 0 var(--sp-6);
+  grid-area: title;
+  margin: 0 0 var(--sp-3);
   font-family: var(--display);
-  font-weight: 500;
-  font-size: clamp(56px, 11vw, 180px);
-  line-height: 0.9;
-  letter-spacing: -0.04em;
+  font-weight: 600;
+  font-size: clamp(44px, 7.5vw, 120px);
+  line-height: 0.95;
+  letter-spacing: -0.035em;
   color: var(--paper);
 }
 .service-block__title em {
@@ -1393,21 +1400,31 @@ body.noir-body {
   padding: 0 0.02em;
 }
 .service-block__detail {
+  grid-area: detail;
   max-width: 72ch;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: var(--sp-6);
+  align-items: start;
+}
+.service-block__detail > .service-block__desc { grid-column: 1; }
+.service-block__detail > .service-block__meta { grid-column: 2; }
+.service-block__detail > .service-block__cta {
+  grid-column: 1 / -1;
+  justify-self: start;
 }
 .service-block__desc {
-  margin: 0 0 var(--sp-5);
+  margin: 0;
   font-family: var(--display);
-  font-size: clamp(16px, 1.5vw, 20px);
-  line-height: 1.6;
+  font-size: clamp(15px, 1.3vw, 18px);
+  line-height: 1.55;
   color: var(--paper);
 }
 .service-block__meta {
   list-style: none;
-  margin: 0 0 var(--sp-6);
-  padding: var(--sp-5) 0;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  margin: 0;
+  padding: 0 0 0 var(--sp-5);
+  border-left: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
@@ -1417,17 +1434,19 @@ body.noir-body {
 }
 .service-block__meta li {
   display: grid;
-  grid-template-columns: 80px 1fr;
-  gap: var(--sp-4);
+  grid-template-columns: 64px 1fr;
+  gap: var(--sp-3);
   text-transform: none;
   letter-spacing: 0;
+  line-height: 1.5;
 }
 .service-block__meta strong {
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--paper);
+  padding-top: 2px;
 }
 .service-block__cta {
   display: inline-flex;
@@ -1470,11 +1489,35 @@ body.noir-body {
 @media (max-width: 900px) {
   .service-block {
     grid-template-columns: 1fr;
-    gap: var(--sp-4);
-    padding: var(--sp-8) var(--gutter);
+    grid-template-areas:
+      "num"
+      "title"
+      "detail";
+    gap: var(--sp-3);
+    padding: var(--sp-7) var(--gutter);
   }
   .service-block__num { padding-top: 0; }
+  .service-block__detail {
+    grid-template-columns: 1fr;
+    gap: var(--sp-4);
+  }
+  .service-block__meta {
+    border-left: none;
+    border-top: 1px solid var(--line);
+    padding: var(--sp-4) 0 0;
+  }
 }
+
+/* Tighten manifesto + service header */
+.manifesto {
+  padding: var(--sp-8) var(--gutter) var(--sp-8);
+  gap: var(--sp-6);
+}
+.service-header {
+  padding: var(--sp-6) var(--gutter) var(--sp-3);
+}
+/* Avoid double-top-border between header and first block */
+.service-header + .service-block { border-top: none; }
 
 /* ═══ Section head centered variant ═══════════════════ */
 .section-head--centered {
