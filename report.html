@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1E2761">
+  <title>개인 결과지 — FLOW~ AX Platform</title>
+  <meta name="description" content="FLOW~ AI 리더십 4-Skill + Gartner 조직 성숙도 개인 결과지">
+
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+  <!-- Chart.js + html2pdf -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/report.css">
+</head>
+<body>
+
+<div id="report-app" class="report-app">
+
+  <!-- Header ───────────────────────────────── -->
+  <header class="report-header">
+    <div class="header-brand">
+      <div class="brand">FLOW~ <span class="brand-sub">AX Platform</span></div>
+      <div class="brand-tagline">개인 진단 결과지</div>
+    </div>
+    <div class="header-actions no-print">
+      <button class="btn-ghost" onclick="FlowReport.exportPDF()">📄 PDF</button>
+      <button class="btn-ghost" onclick="window.print()">🖨️ 인쇄</button>
+      <a class="btn-ghost" href="/">← 홈</a>
+    </div>
+  </header>
+
+  <!-- Loading ───────────────────────────────── -->
+  <section id="report-loading" class="report-state">
+    <div class="spinner"></div>
+    <div class="state-msg">결과를 불러오는 중...</div>
+  </section>
+
+  <!-- Error ─────────────────────────────────── -->
+  <section id="report-error" class="report-state" hidden>
+    <div class="state-icon">⚠️</div>
+    <h2 class="state-title">결과를 찾을 수 없습니다</h2>
+    <p class="state-msg" id="error-msg">응답 ID가 유효하지 않습니다.</p>
+    <a class="btn-primary" href="/assessment.html">진단 다시 시작</a>
+  </section>
+
+  <!-- Content ───────────────────────────────── -->
+  <section id="report-content" hidden>
+
+    <!-- Meta card -->
+    <div class="meta-card">
+      <div class="meta-item">
+        <div class="meta-label">참여자</div>
+        <div class="meta-value" id="m-name">—</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">소속</div>
+        <div class="meta-value" id="m-dept">—</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">진단일</div>
+        <div class="meta-value" id="m-date">—</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">소요 시간</div>
+        <div class="meta-value" id="m-duration">—</div>
+      </div>
+    </div>
+
+    <!-- Overall score -->
+    <div class="score-card">
+      <div class="score-total">
+        <div class="score-label">AI 리더십 4-Skill 총점</div>
+        <div class="score-number">
+          <span id="s-total">0</span><span class="score-max">/ <span id="s-max">100</span></span>
+        </div>
+        <div class="score-level">
+          <span id="s-level">L1</span>
+          <span class="score-level-name" id="s-level-name">미경험</span>
+        </div>
+      </div>
+      <div class="score-gartner">
+        <div class="score-label">Gartner 조직 성숙도</div>
+        <div class="gartner-stage" id="g-stage">Awareness</div>
+        <div class="gartner-avg">평균 <span id="g-avg">0.00</span> / 5.0</div>
+      </div>
+    </div>
+
+    <!-- Radar chart -->
+    <div class="chart-card">
+      <h3 class="section-title">4-Skill 레이더 차트</h3>
+      <p class="section-desc">Bevilacqua et al. (2025) · 4개 축 평균 시각화</p>
+      <div class="chart-wrap">
+        <canvas id="radar-chart" aria-label="4-Skill Radar Chart"></canvas>
+      </div>
+      <div class="legend" id="chart-legend"></div>
+    </div>
+
+    <!-- Axis breakdown -->
+    <div class="axis-card">
+      <h3 class="section-title">축별 상세 분석</h3>
+      <div class="axis-list" id="axis-list"></div>
+    </div>
+
+    <!-- PGI (if post) -->
+    <div class="pgi-card" id="pgi-card" hidden>
+      <h3 class="section-title">Personal Growth Index (PGI)</h3>
+      <p class="section-desc">사전·사후 변화량 — (post − pre) / (100 − pre) × 100</p>
+      <div class="pgi-value">
+        <span id="pgi-number">0</span><span class="pgi-unit">%</span>
+      </div>
+      <div class="pgi-grade" id="pgi-grade"></div>
+      <div class="pgi-desc" id="pgi-desc"></div>
+    </div>
+
+    <!-- Do & Don't hints -->
+    <div class="hints-card">
+      <h3 class="section-title">🎯 Do &amp; Don't 맞춤 제안</h3>
+      <p class="section-desc">본인 결과 기반 개인화 행동 권고</p>
+      <div id="hints-list" class="hints-list"></div>
+    </div>
+
+    <!-- Anomaly flags -->
+    <div class="flags-card" id="flags-card" hidden>
+      <h3 class="section-title">⚠️ 응답 품질 점검</h3>
+      <div id="flags-list" class="flags-list"></div>
+    </div>
+
+    <!-- Footer CTA -->
+    <div class="footer-cta no-print">
+      <h3>다음 단계</h3>
+      <p>이 결과지를 저장하고, 워크숍 세션에서 함께 리뷰합니다.</p>
+      <div class="cta-buttons">
+        <button class="btn-primary" onclick="FlowReport.exportPDF()">📄 PDF 다운로드</button>
+        <a class="btn-secondary" href="/assessment.html">↺ 다시 진단</a>
+      </div>
+    </div>
+
+    <footer class="report-footer">
+      <div>© 2026 FLOW~ AX Design Lab · 플로우~: AX 디자인 연구소</div>
+      <div class="footer-id">Response ID: <span id="r-id">—</span></div>
+    </footer>
+  </section>
+
+</div>
+
+<!-- Scripts (순서 중요) -->
+<script src="/js/firebase-config.js"></script>
+<script src="/js/domain/questions-4skill.js"></script>
+<script src="/js/domain/questions-gartner.js"></script>
+<script src="/js/domain/scoring.js"></script>
+<script src="/js/domain/hint-rules.js"></script>
+<script src="/js/domain/hint-engine.js"></script>
+<script src="/js/domain/anomaly-detector.js"></script>
+<script src="/js/app/report.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    FlowReport.init();
+  });
+</script>
+
+</body>
+</html>

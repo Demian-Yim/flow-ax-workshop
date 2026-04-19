@@ -1,12 +1,68 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ── Existing workshop/team/phase response structure ──────
     match /workshops/{workshopId} {
       allow read: if true;
       allow write: if request.auth != null;
+
       match /teams/{teamId} {
         allow read, write: if true;
+
+        match /responses/{responseId} {
+          allow read, write: if true;
+        }
       }
+    }
+
+    // ── AI Leadership Assessment (4-Skill + Gartner) ─────────
+    match /assessmentResponses/{responseId} {
+      // MVP: open write to allow anonymous participation during workshops.
+      // Production hardening (v2): restrict by workshop code + admin review.
+      allow read: if true;
+      allow create: if request.resource.data.participant.workshopCode is string
+                    && request.resource.data.participant.dept is string
+                    && request.resource.data.phase in ['pre', 'post'];
+      allow update: if resource.data.responseId == request.resource.data.responseId;
+      allow delete: if request.auth != null;
+    }
+
+    // ── Worksheets (RTC, ICEP, WHY-WHAT-HOW, EARS) ───────────
+    match /worksheets/{worksheetId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.workshopCode is string;
+      allow delete: if request.auth != null;
+    }
+
+    // ── Action Plans (90-day commitments + check-ins) ────────
+    match /actionPlans/{planId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.workshopCode is string;
+      allow delete: if request.auth != null;
+
+      match /checkins/{checkinId} {
+        allow read, write: if true;
+      }
+    }
+
+    // ── Trajectories (pre/post + 90-day change tracking) ─────
+    match /trajectories/{trajectoryId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.subjectId is string;
+      allow delete: if request.auth != null;
+    }
+
+    // ── Generated reports cache ──────────────────────────────
+    match /reports/{reportId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // ── Hint rules (read-only for clients; admin writes only) ─
+    match /hintRules/{ruleId} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
   }
 }

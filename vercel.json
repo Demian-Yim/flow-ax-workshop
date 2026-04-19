@@ -2,7 +2,9 @@
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/dashboard", "destination": "/dashboard.html" },
-    { "source": "/gallery", "destination": "/gallery.html" }
+    { "source": "/gallery", "destination": "/gallery.html" },
+    { "source": "/assessment", "destination": "/assessment.html" },
+    { "source": "/report", "destination": "/report.html" }
   ],
   "headers": [
     {
