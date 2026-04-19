@@ -160,11 +160,12 @@
     const datasets = [{
       label: '현재',
       data: values,
-      backgroundColor: 'rgba(91,124,255,0.25)',
-      borderColor: 'rgba(91,124,255,1)',
+      backgroundColor: 'rgba(227,255,56,0.28)',
+      borderColor: 'rgba(227,255,56,1)',
       borderWidth: 2,
-      pointBackgroundColor: 'rgba(91,124,255,1)',
-      pointRadius: 4
+      pointBackgroundColor: 'rgba(227,255,56,1)',
+      pointBorderColor: '#000',
+      pointRadius: 5
     }];
 
     if (preSummary) {
@@ -175,11 +176,11 @@
       datasets.unshift({
         label: '사전',
         data: preValues,
-        backgroundColor: 'rgba(160,160,180,0.15)',
-        borderColor: 'rgba(160,160,180,0.8)',
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        borderColor: 'rgba(255,255,255,0.6)',
         borderWidth: 2,
         borderDash: [6, 4],
-        pointBackgroundColor: 'rgba(160,160,180,1)',
+        pointBackgroundColor: 'rgba(255,255,255,0.8)',
         pointRadius: 3
       });
     }
@@ -197,20 +198,21 @@
             max: 5,
             ticks: {
               stepSize: 1,
-              color: 'rgba(200,210,230,0.6)',
-              backdropColor: 'transparent'
+              color: 'rgba(255,255,255,0.4)',
+              backdropColor: 'transparent',
+              font: { family: "'JetBrains Mono', monospace", size: 10 }
             },
             grid: { color: 'rgba(255,255,255,0.08)' },
             angleLines: { color: 'rgba(255,255,255,0.08)' },
             pointLabels: {
-              color: '#E2E8F5',
-              font: { size: 13, weight: '600' }
+              color: '#FFFFFF',
+              font: { family: "'Space Grotesk', sans-serif", size: 13, weight: '600' }
             }
           }
         },
         plugins: {
           legend: {
-            labels: { color: '#E2E8F5', font: { size: 12 } }
+            labels: { color: '#FFFFFF', font: { family: "'Space Grotesk', sans-serif", size: 12 } }
           },
           tooltip: {
             callbacks: {
@@ -444,7 +446,7 @@
           margin: [10, 10, 10, 10],
           filename,
           image: { type: 'jpeg', quality: 0.95 },
-          html2canvas: { scale: 2, backgroundColor: '#0B1222' },
+          html2canvas: { scale: 2, backgroundColor: '#000000' },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         })
         .save();

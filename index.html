@@ -1,335 +1,434 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="paper">
+<html lang="ko" data-theme="noir">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="사람과 일의 흐름을 디자인합니다 — FLOW~ AX Design Lab. AI 시대의 리더십·직무·조직을 다시 짜는 실전 워크숍 스튜디오.">
-  <title>FLOW~ / AX Design Lab — 2026</title>
+  <meta name="description" content="사람과 일의 흐름을 디자인합니다 — FLOW~ AX Design Lab. Seriously playful AI transformation studio.">
+  <title>FLOW~ / AX Design Lab</title>
 
-  <!-- Typography: Fraunces (serif display) + Manrope (sans body) + JetBrains Mono -->
+  <!-- Type: Space Grotesk (display sans) + Instrument Serif (italic pop) + JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <!-- Styles -->
   <link rel="stylesheet" href="css/landing.css">
 
-  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 
-  <!-- Favicon — 검은 원 한 개 (분위기) -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='38' fill='%2314110F'/></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='38' fill='%23FFFFFF'/></svg>">
 </head>
-<body class="paper-body">
+<body class="noir-body">
 
   <!-- ══════════════════════════════════════════════════════════
-       Film grain overlay
+       Custom magnetic cursor
        ══════════════════════════════════════════════════════════ -->
-  <div class="grain" aria-hidden="true"></div>
+  <div class="cursor" id="cursor" aria-hidden="true"></div>
+  <div class="cursor-follow" id="cursorFollow" aria-hidden="true"></div>
 
   <!-- ══════════════════════════════════════════════════════════
-       Top Nav — editorial masthead
+       Top nav
        ══════════════════════════════════════════════════════════ -->
-  <header class="masthead">
-    <div class="masthead__left">
-      <a class="mark" href="/" aria-label="FLOW~ home">
-        <span class="mark__dot"></span>
-        <span class="mark__wordmark">FLOW~</span>
-      </a>
-      <span class="masthead__divider" aria-hidden="true">/</span>
-      <span class="masthead__sub">AX Design Lab</span>
-    </div>
+  <header class="nav">
+    <a class="nav__mark" href="/" aria-label="FLOW home">
+      <svg viewBox="0 0 40 40" width="28" height="28" class="nav__logo" aria-hidden="true">
+        <circle cx="20" cy="20" r="18" fill="currentColor"/>
+        <circle cx="20" cy="20" r="6" fill="#000"/>
+      </svg>
+      <span class="nav__name">FLOW<span class="nav__tilde">~</span></span>
+    </a>
 
-    <nav class="masthead__nav" aria-label="section nav">
-      <a href="#work">01 Work</a>
-      <a href="#services">02 Services</a>
-      <a href="#about">03 About</a>
-      <a href="#enter">04 Enter</a>
+    <nav class="nav__links" aria-label="primary">
+      <a href="#work" data-hover="Work">Work</a>
+      <a href="#services" data-hover="Services">Services</a>
+      <a href="#studio" data-hover="Studio">Studio</a>
+      <a href="#contact" data-hover="Contact">Contact</a>
     </nav>
 
-    <div class="masthead__right">
-      <span class="masthead__meta"><span class="clock-dot"></span> <span id="clockNow">Seoul ·</span></span>
-      <button class="admin-trigger" id="adminTrigger" aria-label="관리자 접속" title="관리자 접속">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>
+    <div class="nav__right">
+      <span class="nav__time" id="clockNow">Seoul · 00:00</span>
+      <button class="nav__pill" id="adminTrigger" aria-label="Staff access">
+        <span class="nav__pill-dot"></span>
+        Staff
       </button>
     </div>
   </header>
 
   <!-- ══════════════════════════════════════════════════════════
-       Hero — editorial oversized type
+       Hero — massive display type
        ══════════════════════════════════════════════════════════ -->
   <section class="hero" id="hero">
 
-    <!-- Top label strip -->
-    <div class="hero__strip">
-      <span class="tag">Est. 2026</span>
-      <span class="tag tag--line"></span>
-      <span class="tag">Seoul · Remote · Onsite</span>
-      <span class="tag tag--line"></span>
-      <span class="tag">An Independent Studio for AX</span>
+    <div class="hero__top">
+      <span class="caption">(01) — Index</span>
+      <span class="caption caption--right">
+        <span class="blink"></span> Booking 2026 H2
+      </span>
     </div>
 
-    <!-- Main display -->
-    <h1 class="hero__display">
-      <span class="hero__line">We design the</span>
-      <span class="hero__line hero__line--italic"><em>flow</em> of</span>
-      <span class="hero__line hero__line--mix">
-        <span class="hero__amp">work</span>
-        <span class="hero__ampersand">&amp;</span>
-        <span class="hero__amp">people</span>
+    <h1 class="hero__title">
+      <span class="hero__row">
+        <span class="word">We</span>
+        <span class="word">design</span>
+        <span class="word word--outline">the</span>
       </span>
-      <span class="hero__line hero__line--small">in the age of AI.</span>
+      <span class="hero__row">
+        <span class="word">
+          <em class="word__italic">flow</em>
+        </span>
+        <span class="word">of work</span>
+      </span>
+      <span class="hero__row hero__row--end">
+        <span class="word word--small">&amp; people,</span>
+        <span class="word word--small">in the age of AI.</span>
+      </span>
     </h1>
 
-    <!-- Hero meta row -->
-    <div class="hero__meta">
-      <div class="hero__desc">
-        <p class="lede">
-          <em>플로우~</em>는 기업의 AI 전환을 <em>사람·업무·조직</em> 관점에서 다시 짜는 실전 스튜디오입니다.
-          진단부터 90일 실행까지 — Bevilacqua (2025) 4-Skill × Gartner AI Maturity × Kirkpatrick 4-Level을
-          한 플랫폼에 녹였습니다.
+    <div class="hero__foot">
+      <div class="hero__lede">
+        <p>
+          <em>플로우~</em>는 기업의 AI 전환을 사람·업무·조직 관점에서 다시 짜는 독립 스튜디오입니다. 진단부터 90일 실행까지, 한 곳에서.
         </p>
-        <div class="hero__stats">
-          <div class="stat">
-            <div class="stat__num">20 + 10</div>
-            <div class="stat__lbl">문항 · 자가진단</div>
-          </div>
-          <div class="stat">
-            <div class="stat__num">4 축</div>
-            <div class="stat__lbl">리더십 역량</div>
-          </div>
-          <div class="stat">
-            <div class="stat__num">90 일</div>
-            <div class="stat__lbl">행동 추적</div>
-          </div>
+        <div class="hero__cta">
+          <a class="btn btn--solid" href="#enter">
+            <span>Start your flow</span>
+            <span class="arrow">↗</span>
+          </a>
+          <a class="btn btn--ghost" href="#work">
+            <span>See the work</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="hero__meta">
+        <div class="meta-item">
+          <span class="meta-item__k">Est.</span>
+          <span class="meta-item__v">2026</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-item__k">Base</span>
+          <span class="meta-item__v">Seoul · Remote · Onsite</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-item__k">Awards</span>
+          <span class="meta-item__v">In progress</span>
         </div>
       </div>
     </div>
 
-    <!-- Scroll hint -->
-    <div class="hero__scroll" aria-hidden="true">
+    <a class="hero__scroll" href="#marquee" aria-label="scroll">
       <span>Scroll</span>
-      <span class="scroll-bar"></span>
-    </div>
+      <span class="scroll-line"></span>
+    </a>
   </section>
 
   <!-- ══════════════════════════════════════════════════════════
-       Marquee — service ticker
+       Marquee
        ══════════════════════════════════════════════════════════ -->
-  <div class="marquee" aria-hidden="true">
+  <div class="marquee" id="marquee" aria-hidden="true">
     <div class="marquee__track">
-      <span>AI Leadership Diagnostic</span><span class="dot">●</span>
-      <span>Job Rebuilding (RTC · ICEP)</span><span class="dot">●</span>
-      <span>AI Ethics &amp; Risk Playbook</span><span class="dot">●</span>
-      <span>90-Day Action Loops</span><span class="dot">●</span>
-      <span>Champion Identification</span><span class="dot">●</span>
-      <span>Before / After Trajectory</span><span class="dot">●</span>
-      <!-- duplicate for seamless loop -->
-      <span>AI Leadership Diagnostic</span><span class="dot">●</span>
-      <span>Job Rebuilding (RTC · ICEP)</span><span class="dot">●</span>
-      <span>AI Ethics &amp; Risk Playbook</span><span class="dot">●</span>
-      <span>90-Day Action Loops</span><span class="dot">●</span>
-      <span>Champion Identification</span><span class="dot">●</span>
-      <span>Before / After Trajectory</span><span class="dot">●</span>
+      <span>AI Leadership Diagnostic</span><span class="star">✦</span>
+      <span>Job Rebuilding</span><span class="star">✦</span>
+      <span>Seriously Playful</span><span class="star">✦</span>
+      <span>90-Day Action Loops</span><span class="star">✦</span>
+      <span>Champion Identification</span><span class="star">✦</span>
+      <span>Before / After Trajectory</span><span class="star">✦</span>
+      <span>AI Ethics Playbook</span><span class="star">✦</span>
+      <span>AI Leadership Diagnostic</span><span class="star">✦</span>
+      <span>Job Rebuilding</span><span class="star">✦</span>
+      <span>Seriously Playful</span><span class="star">✦</span>
+      <span>90-Day Action Loops</span><span class="star">✦</span>
+      <span>Champion Identification</span><span class="star">✦</span>
+      <span>Before / After Trajectory</span><span class="star">✦</span>
+      <span>AI Ethics Playbook</span><span class="star">✦</span>
     </div>
   </div>
 
   <!-- ══════════════════════════════════════════════════════════
-       Work — 3 program cards (editorial grid)
-       ══════════════════════════════════════════════════════════ -->
-  <section class="work" id="work">
-    <div class="section-head">
-      <span class="eyebrow">01 — Work</span>
-      <h2 class="h2-serif">Three <em>ways</em> to begin.</h2>
-    </div>
-
-    <div class="work__grid">
-      <article class="work-card">
-        <div class="work-card__head">
-          <span class="work-card__num">A</span>
-          <span class="work-card__tag">Half Day · 4h</span>
-        </div>
-        <h3 class="work-card__title">AI 해커톤</h3>
-        <p class="work-card__desc">
-          문제 정의부터 프로토타입까지, AI와 함께 한나절에 솔루션을 만들어내는 스프린트.
-        </p>
-        <ul class="work-card__bullets">
-          <li>이해 → 스케치 → 결정 → 프로토타입 → 테스트</li>
-          <li>ChatGPT · Claude · Cursor · Bolt 활용</li>
-        </ul>
-        <a class="work-card__cta" href="#enter">Start →</a>
-      </article>
-
-      <article class="work-card work-card--feature">
-        <div class="work-card__head">
-          <span class="work-card__num">B</span>
-          <span class="work-card__tag">Full Day · 8h</span>
-        </div>
-        <h3 class="work-card__title">AX 직무 리디자인</h3>
-        <p class="work-card__desc">
-          내 일을 R·T·C로 해체하고, ICEP 매트릭스로 AI 전환 우선순위를 도출.
-          WHY-WHAT-HOW로 AI-Native TO-BE를 그리고 30일 실행계획까지.
-        </p>
-        <ul class="work-card__bullets">
-          <li>RTC Canvas → ICEP Matrix → WHY·WHAT·HOW → EARS Dashboard</li>
-          <li>Bevilacqua 4-Skill + Gartner Maturity 기반 평가</li>
-        </ul>
-        <a class="work-card__cta work-card__cta--filled" href="#enter">Start →</a>
-      </article>
-
-      <article class="work-card">
-        <div class="work-card__head">
-          <span class="work-card__num">C</span>
-          <span class="work-card__tag">2h · Self-serve</span>
-        </div>
-        <h3 class="work-card__title">자가진단 + 결과지</h3>
-        <p class="work-card__desc">
-          30문항 리더십·성숙도 진단 → 레이더·PGI·Do&Don't 포함 개인 결과지.
-        </p>
-        <ul class="work-card__bullets">
-          <li>20 × Likert-5 + 10 × Gartner 5-Level</li>
-          <li>익명 코드 참여 · PDF 다운로드</li>
-        </ul>
-        <a class="work-card__cta" href="/assessment">Take →</a>
-      </article>
-    </div>
-  </section>
-
-  <!-- ══════════════════════════════════════════════════════════
-       Services — philosophy
+       Services — massive typographic list
        ══════════════════════════════════════════════════════════ -->
   <section class="services" id="services">
     <div class="section-head">
-      <span class="eyebrow">02 — Principles</span>
-      <h2 class="h2-serif">We don't sell tools. <em>We design flows.</em></h2>
+      <span class="caption">(02) — Services</span>
+      <h2 class="h2">
+        We make <em>work</em> feel<br>
+        <span class="h2__outline">less like work.</span>
+      </h2>
     </div>
 
-    <div class="services__grid">
+    <ul class="svc-list">
+      <li class="svc-row">
+        <span class="svc-row__num">S/01</span>
+        <span class="svc-row__title">AI Leadership Diagnostic</span>
+        <span class="svc-row__tag">20 + 10 items · 20 min</span>
+        <span class="svc-row__arrow">↗</span>
+      </li>
+      <li class="svc-row">
+        <span class="svc-row__num">S/02</span>
+        <span class="svc-row__title">Job Rebuilding (RTC · ICEP)</span>
+        <span class="svc-row__tag">Workshop · Full day</span>
+        <span class="svc-row__arrow">↗</span>
+      </li>
+      <li class="svc-row">
+        <span class="svc-row__num">S/03</span>
+        <span class="svc-row__title">AI Hackathon Sprint</span>
+        <span class="svc-row__tag">4h · AI-paired</span>
+        <span class="svc-row__arrow">↗</span>
+      </li>
+      <li class="svc-row">
+        <span class="svc-row__num">S/04</span>
+        <span class="svc-row__title">AI Ethics &amp; Risk Playbook</span>
+        <span class="svc-row__tag">Half day · Executive</span>
+        <span class="svc-row__arrow">↗</span>
+      </li>
+      <li class="svc-row">
+        <span class="svc-row__num">S/05</span>
+        <span class="svc-row__title">90-Day Action Loop</span>
+        <span class="svc-row__tag">Monthly check-ins</span>
+        <span class="svc-row__arrow">↗</span>
+      </li>
+      <li class="svc-row">
+        <span class="svc-row__num">S/06</span>
+        <span class="svc-row__title">Champion Identification</span>
+        <span class="svc-row__tag">Cohort analytics</span>
+        <span class="svc-row__arrow">↗</span>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       Work — 3 bold cards
+       ══════════════════════════════════════════════════════════ -->
+  <section class="work" id="work">
+    <div class="section-head">
+      <span class="caption">(03) — Selected Work</span>
+      <h2 class="h2">
+        Three ways <em>to begin</em>.
+      </h2>
+    </div>
+
+    <div class="work__grid">
+      <article class="wcard">
+        <div class="wcard__media">
+          <div class="wcard__visual wcard__visual--a">
+            <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <circle cx="60" cy="100" r="70" fill="#FFF5"/>
+              <circle cx="140" cy="100" r="70" fill="#FFF5"/>
+              <text x="100" y="115" text-anchor="middle" font-family="Instrument Serif" font-size="36" fill="#fff" font-style="italic">A</text>
+            </svg>
+          </div>
+        </div>
+        <div class="wcard__body">
+          <div class="wcard__meta">
+            <span>01 — Half day</span>
+            <span>Hackathon</span>
+          </div>
+          <h3 class="wcard__title">AI <em>Hackathon</em></h3>
+          <p class="wcard__desc">이해→스케치→결정→프로토타입→테스트. AI와 함께 4시간 안에.</p>
+          <a href="#enter" class="wcard__cta">Start <span>→</span></a>
+        </div>
+      </article>
+
+      <article class="wcard wcard--hero">
+        <div class="wcard__media">
+          <div class="wcard__visual wcard__visual--b">
+            <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <rect x="20" y="20" width="160" height="160" stroke="#000" stroke-width="2" fill="none"/>
+              <line x1="20" y1="100" x2="180" y2="100" stroke="#000" stroke-width="1"/>
+              <line x1="100" y1="20" x2="100" y2="180" stroke="#000" stroke-width="1"/>
+              <circle cx="60" cy="60" r="10" fill="#000"/>
+              <circle cx="140" cy="140" r="22" fill="#000"/>
+              <text x="100" y="110" text-anchor="middle" font-family="Instrument Serif" font-size="52" fill="#000" font-style="italic">B</text>
+            </svg>
+          </div>
+        </div>
+        <div class="wcard__body">
+          <div class="wcard__meta">
+            <span>02 — Full day</span>
+            <span>Flagship</span>
+          </div>
+          <h3 class="wcard__title">AX <em>Job Rebuilding</em></h3>
+          <p class="wcard__desc">RTC 캔버스 → ICEP 매트릭스 → WHY·WHAT·HOW → EARS 대시보드. Bevilacqua 4-Skill × Gartner Maturity.</p>
+          <a href="#enter" class="wcard__cta wcard__cta--strong">Start <span>→</span></a>
+        </div>
+      </article>
+
+      <article class="wcard">
+        <div class="wcard__media">
+          <div class="wcard__visual wcard__visual--c">
+            <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <polygon points="100,30 170,80 150,170 50,170 30,80" fill="none" stroke="#fff" stroke-width="1.5"/>
+              <polygon points="100,60 140,90 130,150 70,150 60,90" fill="none" stroke="#fff" stroke-width="1"/>
+              <polygon points="100,90 120,105 115,140 85,140 80,105" fill="#fff"/>
+              <text x="100" y="195" text-anchor="middle" font-family="Instrument Serif" font-size="22" fill="#fff" font-style="italic">C</text>
+            </svg>
+          </div>
+        </div>
+        <div class="wcard__body">
+          <div class="wcard__meta">
+            <span>03 — 20 min</span>
+            <span>Self-serve</span>
+          </div>
+          <h3 class="wcard__title">Self <em>Diagnostic</em></h3>
+          <p class="wcard__desc">30문항 리더십·성숙도 진단 → 개인 결과지(레이더/PGI/Do&Don't).</p>
+          <a href="/assessment" class="wcard__cta">Take <span>→</span></a>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════
+       Principles (03)
+       ══════════════════════════════════════════════════════════ -->
+  <section class="principles">
+    <div class="section-head">
+      <span class="caption">(04) — Principles</span>
+      <h2 class="h2">Four things <em>we believe</em>.</h2>
+    </div>
+
+    <div class="principles__grid">
       <div class="principle">
-        <span class="principle__num">→ 01</span>
-        <h4>사람 먼저, 기술 나중</h4>
-        <p>도구 도입 전 사람의 준비도(P)를 먼저 진단합니다. MIT NANDA 95% 실패 패턴을 피하는 출발점.</p>
+        <span class="principle__num">01</span>
+        <h4 class="principle__title">People first,<br>tech later.</h4>
+        <p>사람의 준비도(P)가 도구 도입을 앞섭니다. MIT NANDA 95% 실패를 피하는 유일한 출발점.</p>
       </div>
       <div class="principle">
-        <span class="principle__num">→ 02</span>
-        <h4>없애기 &gt; 줄이기 &gt; 자동화</h4>
-        <p>AI로 자동화하기 전, 해당 업무가 정말 필요한지 다시 묻습니다. 가장 빠른 전환은 일을 없애는 것.</p>
+        <span class="principle__num">02</span>
+        <h4 class="principle__title">Remove,<br>then reduce,<br>then automate.</h4>
+        <p>AI로 자동화하기 전, 그 일이 정말 필요한지 다시 묻습니다.</p>
       </div>
       <div class="principle">
-        <span class="principle__num">→ 03</span>
-        <h4>측정 없이 변화 없다</h4>
-        <p>Before / After 궤적을 남기고, 90일 체크인으로 행동 변화를 추적합니다. Kirkpatrick Level 3·4.</p>
+        <span class="principle__num">03</span>
+        <h4 class="principle__title">If you can't<br>measure it,<br>you can't move it.</h4>
+        <p>Before / After 궤적을 남기고, 90일 체크인으로 행동 변화를 추적합니다.</p>
       </div>
       <div class="principle">
-        <span class="principle__num">→ 04</span>
-        <h4>리더가 먼저 모델링</h4>
-        <p>임원이 자기 실패를 먼저 공유해야 팀이 열립니다. 심리적 안전감이 학습 조직의 출발.</p>
+        <span class="principle__num">04</span>
+        <h4 class="principle__title">Leaders<br>model first.</h4>
+        <p>임원이 자기 실패를 먼저 공유해야 팀이 열립니다. 심리적 안전감 = 학습 조직의 출발.</p>
       </div>
     </div>
   </section>
 
   <!-- ══════════════════════════════════════════════════════════
-       Enter — code entry (editorial style)
+       Enter
        ══════════════════════════════════════════════════════════ -->
-  <section class="enter-section" id="enter">
+  <section class="enter" id="enter">
     <div class="section-head">
-      <span class="eyebrow">04 — Enter</span>
-      <h2 class="h2-serif">Have a code?</h2>
+      <span class="caption">(05) — Enter</span>
+      <h2 class="h2">
+        Got a <em>code</em>?
+      </h2>
     </div>
 
-    <div class="enter-card" id="entryCard">
-      <p class="enter-card__lede">강사에게 받은 <strong>4자리 코드</strong>를 입력해 워크숍에 참여하세요.</p>
+    <div class="enter__card" id="entryCard">
+      <p class="enter__lede">강사에게 받은 <em>4자리 코드</em>로 워크숍에 참여하세요.</p>
 
-      <div class="code-input-group" id="codeInputGroup" role="group" aria-label="참여 코드">
-        <input type="text" class="code-input" maxlength="1" data-index="0" autocomplete="off" inputmode="text" aria-label="코드 1자리">
-        <input type="text" class="code-input" maxlength="1" data-index="1" autocomplete="off" inputmode="text" aria-label="코드 2자리">
-        <input type="text" class="code-input" maxlength="1" data-index="2" autocomplete="off" inputmode="text" aria-label="코드 3자리">
-        <input type="text" class="code-input" maxlength="1" data-index="3" autocomplete="off" inputmode="text" aria-label="코드 4자리">
+      <div class="code-input-group" id="codeInputGroup" role="group" aria-label="4 digit code">
+        <input type="text" class="code-input" maxlength="1" data-index="0" autocomplete="off" inputmode="text" aria-label="1">
+        <input type="text" class="code-input" maxlength="1" data-index="1" autocomplete="off" inputmode="text" aria-label="2">
+        <input type="text" class="code-input" maxlength="1" data-index="2" autocomplete="off" inputmode="text" aria-label="3">
+        <input type="text" class="code-input" maxlength="1" data-index="3" autocomplete="off" inputmode="text" aria-label="4">
       </div>
 
-      <div class="enter-card__actions">
-        <button class="btn btn-primary" id="enterBtn" disabled>
-          참여하기 <span aria-hidden="true">→</span>
+      <div class="enter__actions">
+        <button class="btn btn--solid" id="enterBtn" disabled>
+          <span>Enter workshop</span>
+          <span class="arrow">↗</span>
         </button>
-        <a class="btn btn-ghost" href="/assessment">
-          코드 없이 자가진단만
+        <a class="btn btn--ghost btn--ghost-light" href="/assessment">
+          <span>Self-diagnostic only</span>
         </a>
       </div>
 
-      <p class="enter-card__hint">익명으로 참여할 수 있습니다. 응답은 강사만 볼 수 있습니다.</p>
+      <p class="enter__hint">Anonymous by default. Data visible to facilitator.</p>
     </div>
   </section>
 
   <!-- ══════════════════════════════════════════════════════════
-       About / footer
+       Studio
        ══════════════════════════════════════════════════════════ -->
-  <section class="about" id="about">
+  <section class="studio" id="studio">
     <div class="section-head">
-      <span class="eyebrow">03 — Colophon</span>
-      <h2 class="h2-serif">FLOW~ / 플로우~<br><em>AX Design Lab</em></h2>
+      <span class="caption">(06) — Studio</span>
+      <h2 class="h2">
+        FLOW<em>~</em><br>
+        <span class="h2__outline">AX Design Lab.</span>
+      </h2>
     </div>
 
-    <div class="about__grid">
-      <div class="about__col">
-        <h5>Studio</h5>
-        <p>사람과 일의 흐름을 디자인합니다. 2026년 서울에서 시작된 독립 스튜디오.</p>
+    <div class="studio__grid">
+      <div class="studio__col">
+        <h5>What</h5>
+        <p>사람과 일의 흐름을 디자인합니다. 2026년 서울에서 시작한 독립 스튜디오.</p>
       </div>
-      <div class="about__col">
-        <h5>Research</h5>
-        <p>Bevilacqua et al. (2025) · Gartner AI Maturity · MIT SMR · MIT NANDA · McKinsey State of AI · Kirkpatrick</p>
+      <div class="studio__col">
+        <h5>How</h5>
+        <p>Bevilacqua (2025) 4-Skill · Gartner AI Maturity · MIT SMR · MIT NANDA · McKinsey · Kirkpatrick.</p>
       </div>
-      <div class="about__col">
-        <h5>Contact</h5>
-        <p><a href="https://flowdesign.ai.kr" target="_blank" rel="noopener">flowdesign.ai.kr</a><br>Seoul · 2026</p>
+      <div class="studio__col">
+        <h5>Where</h5>
+        <p><a href="https://flowdesign.ai.kr" target="_blank" rel="noopener">flowdesign.ai.kr</a><br>Seoul · Remote · Onsite.</p>
       </div>
     </div>
   </section>
 
-  <footer class="colophon">
-    <div class="colophon__row">
-      <span class="colophon__left">© 2026 FLOW~ AX Design Lab</span>
-      <span class="colophon__center">— Designed on paper, shipped on code —</span>
-      <span class="colophon__right"><a href="/assessment">Assessment</a> · <a href="/report">Report</a> · <a href="/gallery">Gallery</a></span>
+  <!-- ══════════════════════════════════════════════════════════
+       Footer / contact
+       ══════════════════════════════════════════════════════════ -->
+  <footer class="footer" id="contact">
+    <div class="footer__big">
+      <span class="caption">(07) — Say hi</span>
+      <a class="footer__mail" href="mailto:hello@flowdesign.ai.kr">
+        hello@flowdesign.ai.kr <span class="arrow">↗</span>
+      </a>
+    </div>
+
+    <div class="footer__row">
+      <span>© 2026 FLOW~ AX Design Lab</span>
+      <span class="footer__links">
+        <a href="/assessment">Assessment</a>
+        <a href="/report">Report</a>
+        <a href="/gallery">Gallery</a>
+      </span>
+      <span class="footer__tag">Seriously playful.</span>
     </div>
   </footer>
 
   <!-- ══════════════════════════════════════════════════════════
-       Admin Login Modal (preserved hooks)
+       Admin Modal
        ══════════════════════════════════════════════════════════ -->
   <div class="modal-backdrop" id="adminModal">
     <div class="modal">
-      <div class="modal__header">
-        <span class="eyebrow eyebrow--dark">Staff</span>
-        <h2 class="modal__title">Operator Access</h2>
-        <p class="modal__subtitle">역할을 선택하고 비밀번호를 입력하세요.</p>
-      </div>
+      <button class="modal__close" id="adminCloseX" aria-label="Close">×</button>
+      <span class="caption caption--light">(∙) — Staff access</span>
+      <h2 class="modal__title">Operator<br><em>access</em>.</h2>
 
       <div class="role-selector" id="roleSelector">
         <button class="role-option" data-role="facilitator">
-          <span class="role-option__num">A</span>
+          <span class="role-option__num">01</span>
           <div>
             <div class="role-option__label">퍼실리테이터</div>
             <div class="role-option__desc">워크숍 진행 · 팀 모니터링</div>
           </div>
+          <span class="role-option__arrow">↗</span>
         </button>
         <button class="role-option" data-role="judge">
-          <span class="role-option__num">B</span>
+          <span class="role-option__num">02</span>
           <div>
             <div class="role-option__label">심사위원</div>
             <div class="role-option__desc">결과물 심사 · 피드백</div>
           </div>
+          <span class="role-option__arrow">↗</span>
         </button>
         <button class="role-option" data-role="admin">
-          <span class="role-option__num">C</span>
+          <span class="role-option__num">03</span>
           <div>
             <div class="role-option__label">시스템 관리자</div>
             <div class="role-option__desc">전체 시스템 · 데이터</div>
           </div>
+          <span class="role-option__arrow">↗</span>
         </button>
       </div>
 
@@ -339,25 +438,28 @@
       </div>
 
       <div class="modal__actions">
-        <button class="btn btn-ghost" id="adminCancelBtn">취소</button>
-        <button class="btn btn-primary" id="adminLoginBtn">접속 →</button>
+        <button class="btn btn--ghost btn--ghost-light" id="adminCancelBtn">Cancel</button>
+        <button class="btn btn--solid btn--solid-inv" id="adminLoginBtn">
+          <span>Sign in</span>
+          <span class="arrow">↗</span>
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Tutorial (preserved hooks) -->
+  <!-- Tutorial -->
   <div class="tutorial-overlay hidden" id="tutorialOverlay">
     <div class="tutorial-card">
       <div class="tutorial-card__step" id="tutorialStep">01 / 03</div>
-      <div class="tutorial-card__icon" id="tutorialIcon">＊</div>
-      <h3 class="tutorial-card__title" id="tutorialTitle">환영합니다</h3>
+      <div class="tutorial-card__icon" id="tutorialIcon">✦</div>
+      <h3 class="tutorial-card__title" id="tutorialTitle">Welcome</h3>
       <p class="tutorial-card__desc" id="tutorialDesc">
         FLOW~ AX Workshop에 오신 것을 환영합니다.<br>
         간단한 사용법을 안내드릴게요.
       </p>
       <div class="tutorial-card__actions">
-        <button class="btn btn-ghost btn-sm" id="tutorialSkip">건너뛰기</button>
-        <button class="btn btn-primary btn-sm" id="tutorialNext">다음 →</button>
+        <button class="btn btn--ghost btn--sm" id="tutorialSkip">Skip</button>
+        <button class="btn btn--solid btn--sm" id="tutorialNext">Next ↗</button>
       </div>
     </div>
   </div>
@@ -367,19 +469,6 @@
   <!-- Scripts -->
   <script src="js/firebase-config.js"></script>
   <script src="js/landing.js"></script>
-  <script>
-    // Light runtime — clock
-    (function () {
-      const el = document.getElementById('clockNow');
-      if (!el) return;
-      function tick() {
-        const d = new Date();
-        const hh = String(d.getHours()).padStart(2, '0');
-        const mm = String(d.getMinutes()).padStart(2, '0');
-        el.textContent = `Seoul · ${hh}:${mm}`;
-      }
-      tick(); setInterval(tick, 30000);
-    })();
-  </script>
+  <script src="js/landing-motion.js" defer></script>
 </body>
 </html>
