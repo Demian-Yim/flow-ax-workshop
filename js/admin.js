@@ -23,8 +23,26 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── LocalStorage-based data (works without Firebase) ──
   let workshops = JSON.parse(localStorage.getItem('flow-workshops') || '[]');
 
+  // Auto-heal: 구버전/실패 레코드에 rounds/teams 없으면 기본값 주입
+  workshops = workshops.map(ws => ({
+    ...ws,
+    rounds: ws.rounds && ws.rounds.length ? ws.rounds : getDefaultRounds(ws.type || 'hackathon'),
+    teams: ws.teams || [],
+    code: ws.code || '????',
+  }));
+
   function saveWorkshops() {
     localStorage.setItem('flow-workshops', JSON.stringify(workshops));
+  }
+  // 마이그레이션 결과 즉시 저장
+  saveWorkshops();
+
+  // Firestore 호출 공통 타임아웃 래퍼
+  function withTimeout(promise, ms, label) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} 타임아웃 (${ms/1000}s)`)), ms))
+    ]);
   }
 
   // ── Tab Logic ──
@@ -89,14 +107,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // 1) Firestore 저장 (10초 타임아웃 — 오프라인/차단 시 hang 방지)
       if (typeof db !== 'undefined' && db) {
         try {
-          const writePromise = db.collection('workshops').doc(workshop.id).set({
-            ...workshop,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          });
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Firestore 응답 없음 (10초 타임아웃)')), 10000)
+          await withTimeout(
+            db.collection('workshops').doc(workshop.id).set({
+              ...workshop,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            }),
+            10000,
+            'Firestore 저장'
           );
-          await Promise.race([writePromise, timeoutPromise]);
           firestoreOk = true;
         } catch (err) {
           firestoreErr = err;
@@ -200,19 +218,22 @@ document.addEventListener('DOMContentLoaded', () => {
   window.deleteWorkshop = async function(id) {
     if (!confirm('이 워크샵을 삭제하시겠습니까? 모든 팀 데이터도 함께 삭제됩니다.')) return;
 
-    // Firestore 문서 + teams/responses 서브컬렉션 일괄 삭제
+    // Firestore 문서 + teams/responses 서브컬렉션 일괄 삭제 (15초 타임아웃)
     try {
       if (typeof db !== 'undefined' && db) {
-        const teamsSnap = await db.collection('workshops').doc(id).collection('teams').get();
-        for (const teamDoc of teamsSnap.docs) {
-          const respSnap = await teamDoc.ref.collection('responses').get();
-          await Promise.all(respSnap.docs.map(d => d.ref.delete()));
-          await teamDoc.ref.delete();
-        }
-        await db.collection('workshops').doc(id).delete();
+        await withTimeout((async () => {
+          const teamsSnap = await db.collection('workshops').doc(id).collection('teams').get();
+          for (const teamDoc of teamsSnap.docs) {
+            const respSnap = await teamDoc.ref.collection('responses').get();
+            await Promise.all(respSnap.docs.map(d => d.ref.delete()));
+            await teamDoc.ref.delete();
+          }
+          await db.collection('workshops').doc(id).delete();
+        })(), 15000, 'Firestore 삭제');
       }
     } catch (err) {
       console.warn('Firestore 삭제 실패 (로컬만 삭제):', err);
+      showToast(`⚠️ 클라우드 삭제 실패: ${err.message || err}`, 'warning', 6000);
     }
 
     workshops = workshops.filter(w => w.id !== id);
@@ -341,14 +362,57 @@ document.addEventListener('DOMContentLoaded', () => {
           </td>
           <td>
             <div class="action-btns">
-              <button class="action-btn" title="상세보기">👁️</button>
-              <button class="action-btn action-btn--danger" title="삭제">✕</button>
+              <button class="action-btn" title="상세보기" onclick="viewTeamDetail('${ws.id}','${team.id}')">👁️</button>
+              <button class="action-btn action-btn--danger" title="삭제" onclick="deleteTeam('${ws.id}','${team.id}')">✕</button>
             </div>
           </td>
         </tr>
       `;
     }).join('');
   }
+
+  // ── Team Detail View ──
+  window.viewTeamDetail = function(workshopId, teamId) {
+    const ws = workshops.find(w => w.id === workshopId);
+    const team = (ws?.teams || []).find(t => t.id === teamId);
+    if (!team) { showToast('팀을 찾을 수 없습니다.', 'warning'); return; }
+    const info = [
+      `📋 ${team.name}`,
+      `PIN: ${team.pin || '-'}`,
+      `단계: STEP${team.currentStep || 1}`,
+      `진행: ${team.progress || 0}%`,
+      `팀원: ${(team.members || []).join(', ') || '미지정'}`,
+      team.submission ? `제출: ✅` : `제출: 미제출`,
+    ].join(' · ');
+    showToast(info, 'info', 8000);
+  };
+
+  // ── Team Delete ──
+  window.deleteTeam = async function(workshopId, teamId) {
+    if (!confirm('이 팀과 모든 응답을 삭제하시겠습니까?')) return;
+    try {
+      if (typeof db !== 'undefined' && db) {
+        await withTimeout((async () => {
+          const respSnap = await db.collection('workshops').doc(workshopId)
+            .collection('teams').doc(teamId).collection('responses').get();
+          await Promise.all(respSnap.docs.map(d => d.ref.delete()));
+          await db.collection('workshops').doc(workshopId)
+            .collection('teams').doc(teamId).delete();
+        })(), 10000, '팀 삭제');
+      }
+    } catch (err) {
+      console.warn('Firestore 팀 삭제 실패:', err);
+      showToast(`⚠️ 클라우드 팀 삭제 실패: ${err.message || err}`, 'warning', 5000);
+    }
+    const ws = workshops.find(w => w.id === workshopId);
+    if (ws) {
+      ws.teams = (ws.teams || []).filter(t => t.id !== teamId);
+      saveWorkshops();
+      renderTeamTable(ws);
+      updateStats();
+    }
+    showToast('팀이 삭제되었습니다.', 'info');
+  };
 
   // ── System Data ──
   document.getElementById('exportDataBtn').addEventListener('click', () => {
@@ -422,16 +486,21 @@ document.addEventListener('DOMContentLoaded', () => {
   async function syncFromFirestore() {
     try {
       if (typeof db === 'undefined' || !db) return;
-      const snap = await db.collection('workshops').where('status', '==', 'active').get();
+      const snap = await withTimeout(
+        db.collection('workshops').where('status', '==', 'active').get(),
+        8000,
+        'Firestore 동기화'
+      );
       const remote = snap.docs.map(d => {
         const data = d.data();
         return {
           ...data,
           id: data.id || d.id,
+          rounds: data.rounds && data.rounds.length ? data.rounds : getDefaultRounds(data.type || 'hackathon'),
+          teams: data.teams || [],
           createdAt: typeof data.createdAt === 'string' ? data.createdAt : new Date().toISOString(),
         };
       });
-      // merge: remote 우선, 로컬 전용은 유지
       const remoteIds = new Set(remote.map(w => w.id));
       const localOnly = workshops.filter(w => !remoteIds.has(w.id));
       workshops = [...remote, ...localOnly];
