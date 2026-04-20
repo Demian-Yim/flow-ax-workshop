@@ -469,20 +469,26 @@ body > * { position: relative; z-index: 1; }
   max-width: 20ch;
 }
 .manifesto__text em {
-  font-family: var(--serif);
-  font-style: italic;
-  font-weight: 400;
-  color: var(--accent);
-  padding: 0 0.04em;
+  font-family: 'Pretendard', var(--display);
+  font-style: normal;
+  font-weight: 800;
+  background: var(--grad-accent);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  padding: 0 0.04em 0.08em 0;
+  letter-spacing: -0.02em;
 }
 .outline-word {
+  font-family: 'Pretendard', var(--display);
+  font-weight: 800;
   background: var(--grad-accent);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  padding: 0 0.04em;
-  font-weight: 700;
+  padding: 0 0.04em 0.08em 0;
+  letter-spacing: -0.02em;
 }
 .manifesto__foot {
   max-width: 64ch;
@@ -697,14 +703,16 @@ body > * { position: relative; z-index: 1; }
 }
 .h2--centered { max-width: none; text-align: center; }
 .h2 em {
-  font-family: var(--serif);
-  font-style: italic;
-  font-weight: 400;
+  font-family: 'Pretendard', var(--display);
+  font-style: normal;
+  font-weight: 800;
   background: var(--grad-accent);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  font-size: 1.05em;
+  font-size: 1.1em;
+  letter-spacing: -0.02em;
+  padding: 0 0.04em 0.08em 0;
 }
 
 .principles__grid {
@@ -1124,13 +1132,15 @@ body > * { position: relative; z-index: 1; }
   color: var(--ink);
 }
 .modal__title em {
-  font-family: var(--serif);
-  font-style: italic;
+  font-family: 'Pretendard', var(--display);
+  font-style: normal;
   background: var(--grad-accent);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  font-weight: 400;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  padding: 0 0.04em 0.06em 0;
 }
 
 .role-selector { display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-5); }
