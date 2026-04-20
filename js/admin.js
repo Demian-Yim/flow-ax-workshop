@@ -82,44 +82,54 @@ document.addEventListener('DOMContentLoaded', () => {
       teams: [],
     };
 
-    // 1) Firestore에 저장 (타 기기/참가자 접근용)
     let firestoreOk = false;
     let firestoreErr = null;
+
     try {
+      // 1) Firestore 저장 (10초 타임아웃 — 오프라인/차단 시 hang 방지)
       if (typeof db !== 'undefined' && db) {
-        await db.collection('workshops').doc(workshop.id).set({
-          ...workshop,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        });
-        firestoreOk = true;
+        try {
+          const writePromise = db.collection('workshops').doc(workshop.id).set({
+            ...workshop,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Firestore 응답 없음 (10초 타임아웃)')), 10000)
+          );
+          await Promise.race([writePromise, timeoutPromise]);
+          firestoreOk = true;
+        } catch (err) {
+          firestoreErr = err;
+          console.error('Firestore 저장 실패:', err);
+        }
       } else {
-        firestoreErr = new Error('Firebase가 초기화되지 않았습니다. 새로고침 후 재시도해주세요.');
+        firestoreErr = new Error('Firebase 미초기화 — 로컬 저장만 수행');
+      }
+
+      // 2) localStorage 저장 (항상 수행)
+      workshops.push(workshop);
+      saveWorkshops();
+
+      // Reset form
+      document.getElementById('workshopName').value = '';
+      typeCards.forEach(c => c.classList.remove('selected'));
+      selectedType = null;
+
+      renderWorkshopList();
+      updateStats();
+
+      if (firestoreOk) {
+        showToast(`✅ 클라우드 저장 완료! 코드: ${code} (모든 기기에서 접근 가능)`, 'success', 6000);
+      } else {
+        const reason = firestoreErr ? ` — ${firestoreErr.message || firestoreErr.code || firestoreErr}` : '';
+        showToast(`⚠️ 로컬만 저장됨 (코드: ${code})${reason}`, 'warning', 8000);
       }
     } catch (err) {
-      firestoreErr = err;
-      console.error('Firestore 저장 실패:', err);
-    }
-
-    // 2) localStorage에도 저장 (오프라인/관리자 재접속용)
-    workshops.push(workshop);
-    saveWorkshops();
-
-    // Reset form
-    document.getElementById('workshopName').value = '';
-    typeCards.forEach(c => c.classList.remove('selected'));
-    selectedType = null;
-
-    renderWorkshopList();
-    updateStats();
-
-    btn.disabled = false;
-    btn.textContent = '🚀 워크숍 생성하기';
-
-    if (firestoreOk) {
-      showToast(`✅ 클라우드 저장 완료! 코드: ${code} (모든 기기에서 접근 가능)`, 'success', 6000);
-    } else {
-      const reason = firestoreErr ? ` — ${firestoreErr.message || firestoreErr.code || firestoreErr}` : '';
-      showToast(`⚠️ 로컬만 저장됨 (코드: ${code})${reason}`, 'warning', 8000);
+      console.error('워크샵 생성 중 예외:', err);
+      showToast(`❌ 생성 실패: ${err.message || err}`, 'error', 8000);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🚀 워크숍 생성하기';
     }
   });
 
