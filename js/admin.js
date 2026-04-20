@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="workshop-item__meta">
               <span>👥 ${teamCount}개 팀</span>
               <span>📅 ${new Date(ws.createdAt).toLocaleDateString('ko-KR')}</span>
-              <span>${ws.rounds.length}단계 스프린트</span>
+              <span>${(ws.rounds || []).length}단계 스프린트</span>
             </div>
           </div>
           <div class="workshop-item__code" onclick="copyCode('${ws.code}')" title="클릭하여 복사">
@@ -304,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     tbody.innerHTML = teams.map(team => {
-      const roundName = ws.rounds[team.currentStep - 1]?.name || '-';
+      const roundName = (ws.rounds || [])[team.currentStep - 1]?.name || '-';
       const progressWidth = team.progress || 0;
       
       return `
