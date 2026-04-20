@@ -160,11 +160,12 @@
     const datasets = [{
       label: '현재',
       data: values,
-      backgroundColor: 'rgba(227,255,56,0.28)',
-      borderColor: 'rgba(227,255,56,1)',
+      backgroundColor: 'rgba(107,92,229,0.22)',
+      borderColor: 'rgba(107,92,229,1)',
       borderWidth: 2,
-      pointBackgroundColor: 'rgba(227,255,56,1)',
-      pointBorderColor: '#000',
+      pointBackgroundColor: 'rgba(107,92,229,1)',
+      pointBorderColor: '#FFFFFF',
+      pointBorderWidth: 2,
       pointRadius: 5
     }];
 
@@ -176,11 +177,11 @@
       datasets.unshift({
         label: '사전',
         data: preValues,
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        borderColor: 'rgba(255,255,255,0.6)',
+        backgroundColor: 'rgba(255,185,156,0.18)',
+        borderColor: 'rgba(255,122,92,0.8)',
         borderWidth: 2,
         borderDash: [6, 4],
-        pointBackgroundColor: 'rgba(255,255,255,0.8)',
+        pointBackgroundColor: 'rgba(255,122,92,1)',
         pointRadius: 3
       });
     }
@@ -198,21 +199,21 @@
             max: 5,
             ticks: {
               stepSize: 1,
-              color: 'rgba(255,255,255,0.4)',
+              color: 'rgba(26,27,58,0.4)',
               backdropColor: 'transparent',
               font: { family: "'JetBrains Mono', monospace", size: 10 }
             },
-            grid: { color: 'rgba(255,255,255,0.08)' },
-            angleLines: { color: 'rgba(255,255,255,0.08)' },
+            grid: { color: 'rgba(26,27,58,0.08)' },
+            angleLines: { color: 'rgba(26,27,58,0.08)' },
             pointLabels: {
-              color: '#FFFFFF',
+              color: '#1A1B3A',
               font: { family: "'Space Grotesk', sans-serif", size: 13, weight: '600' }
             }
           }
         },
         plugins: {
           legend: {
-            labels: { color: '#FFFFFF', font: { family: "'Space Grotesk', sans-serif", size: 12 } }
+            labels: { color: '#1A1B3A', font: { family: "'Space Grotesk', sans-serif", size: 12 } }
           },
           tooltip: {
             callbacks: {
@@ -446,7 +447,7 @@
           margin: [10, 10, 10, 10],
           filename,
           image: { type: 'jpeg', quality: 0.95 },
-          html2canvas: { scale: 2, backgroundColor: '#000000' },
+          html2canvas: { scale: 2, backgroundColor: '#FAFAF5' },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         })
         .save();

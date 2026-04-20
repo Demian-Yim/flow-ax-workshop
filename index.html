@@ -209,11 +209,17 @@
   <section class="enter" id="enter">
     <div class="section-head section-head--centered">
       <span class="caption">(04) — Enter</span>
-      <h2 class="h2 h2--centered">코드가 있으신가요?</h2>
+      <h2 class="h2 h2--centered">지금 <em>참여</em>하기.</h2>
     </div>
 
     <div class="enter__card" id="entryCard">
-      <p class="enter__lede">강사에게 받은 <em>4자리 코드</em>로 워크숍에 참여하세요.</p>
+      <div class="enter__tabs" role="tablist" aria-label="입장 방식">
+        <span class="enter__tab enter__tab--active">워크숍 참여</span>
+        <span class="enter__tab-divider">·</span>
+        <a class="enter__tab" href="/assessment">자가진단</a>
+      </div>
+
+      <p class="enter__lede">강사에게 받은 <em>4자리 코드</em>를 입력하세요.</p>
 
       <div class="code-input-group" id="codeInputGroup" role="group" aria-label="4 digit code">
         <input type="text" class="code-input" maxlength="1" data-index="0" autocomplete="off" inputmode="text" aria-label="1">
@@ -224,15 +230,25 @@
 
       <div class="enter__actions">
         <button class="btn btn--solid" id="enterBtn" disabled>
-          <span>Enter workshop</span>
+          <span>워크숍 입장</span>
           <span class="arrow">↗</span>
         </button>
-        <a class="btn btn--ghost btn--ghost-light" href="/assessment">
-          <span>코드 없이 자가진단</span>
-        </a>
       </div>
 
-      <p class="enter__hint">익명으로 참여할 수 있습니다. 응답은 강사만 볼 수 있습니다.</p>
+      <div class="enter__meta">
+        <div class="enter__meta-item">
+          <span class="enter__meta-k">형식</span>
+          <span class="enter__meta-v">익명 참여 · 실시간 취합</span>
+        </div>
+        <div class="enter__meta-item">
+          <span class="enter__meta-k">데이터</span>
+          <span class="enter__meta-v">강사만 열람 · Firestore 저장</span>
+        </div>
+        <div class="enter__meta-item">
+          <span class="enter__meta-k">대체</span>
+          <a href="/assessment" class="enter__meta-link">코드 없이 자가진단만 →</a>
+        </div>
+      </div>
     </div>
   </section>
 
