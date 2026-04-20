@@ -52,10 +52,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ── Create Workshop ──
-  document.getElementById('createWorkshopBtn').addEventListener('click', () => {
+  // ── Create Workshop (Firestore + localStorage hybrid) ──
+  document.getElementById('createWorkshopBtn').addEventListener('click', async () => {
     const name = document.getElementById('workshopName').value.trim();
-    
+
     if (!name) {
       showToast('워크샵 이름을 입력해주세요.', 'warning');
       return;
@@ -64,6 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('워크샵 유형을 선택해주세요.', 'warning');
       return;
     }
+
+    const btn = document.getElementById('createWorkshopBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ 생성 중...';
 
     const code = generateClassCode();
     const workshop = {
@@ -78,6 +82,25 @@ document.addEventListener('DOMContentLoaded', () => {
       teams: [],
     };
 
+    // 1) Firestore에 저장 (타 기기/참가자 접근용)
+    let firestoreOk = false;
+    let firestoreErr = null;
+    try {
+      if (typeof db !== 'undefined' && db) {
+        await db.collection('workshops').doc(workshop.id).set({
+          ...workshop,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        firestoreOk = true;
+      } else {
+        firestoreErr = new Error('Firebase가 초기화되지 않았습니다. 새로고침 후 재시도해주세요.');
+      }
+    } catch (err) {
+      firestoreErr = err;
+      console.error('Firestore 저장 실패:', err);
+    }
+
+    // 2) localStorage에도 저장 (오프라인/관리자 재접속용)
     workshops.push(workshop);
     saveWorkshops();
 
@@ -88,7 +111,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderWorkshopList();
     updateStats();
-    showToast(`워크샵 "${name}" 생성 완료! 코드: ${code}`, 'success');
+
+    btn.disabled = false;
+    btn.textContent = '🚀 워크숍 생성하기';
+
+    if (firestoreOk) {
+      showToast(`✅ 클라우드 저장 완료! 코드: ${code} (모든 기기에서 접근 가능)`, 'success', 6000);
+    } else {
+      const reason = firestoreErr ? ` — ${firestoreErr.message || firestoreErr.code || firestoreErr}` : '';
+      showToast(`⚠️ 로컬만 저장됨 (코드: ${code})${reason}`, 'warning', 8000);
+    }
   });
 
   // ── Render Workshop List ──
@@ -154,9 +186,25 @@ document.addEventListener('DOMContentLoaded', () => {
     loadTeamMonitoring(id);
   };
 
-  // ── Delete Workshop ──
-  window.deleteWorkshop = function(id) {
+  // ── Delete Workshop (Firestore + local) ──
+  window.deleteWorkshop = async function(id) {
     if (!confirm('이 워크샵을 삭제하시겠습니까? 모든 팀 데이터도 함께 삭제됩니다.')) return;
+
+    // Firestore 문서 + teams/responses 서브컬렉션 일괄 삭제
+    try {
+      if (typeof db !== 'undefined' && db) {
+        const teamsSnap = await db.collection('workshops').doc(id).collection('teams').get();
+        for (const teamDoc of teamsSnap.docs) {
+          const respSnap = await teamDoc.ref.collection('responses').get();
+          await Promise.all(respSnap.docs.map(d => d.ref.delete()));
+          await teamDoc.ref.delete();
+        }
+        await db.collection('workshops').doc(id).delete();
+      }
+    } catch (err) {
+      console.warn('Firestore 삭제 실패 (로컬만 삭제):', err);
+    }
+
     workshops = workshops.filter(w => w.id !== id);
     saveWorkshops();
     renderWorkshopList();
@@ -209,14 +257,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('monitoringEmpty').style.display = 'none';
     document.getElementById('monitoringHeader').style.display = 'block';
-    document.getElementById('teamTableWrapper').style.display = 'block';
 
     const typeInfo = getWorkshopTypeLabel(ws.type);
     document.getElementById('monitorWorkshopName').innerHTML = `
-      <span style="cursor:pointer" onclick="document.getElementById('monitorWorkshopSelect').value='';document.getElementById('monitoringEmpty').style.display='block';document.getElementById('monitoringHeader').style.display='none';document.getElementById('teamTableWrapper').style.display='none';">←</span>
+      <span style="cursor:pointer" onclick="document.getElementById('monitorWorkshopSelect').value='';document.getElementById('monitoringEmpty').style.display='block';document.getElementById('monitoringHeader').style.display='none';document.getElementById('teamTableWrapper').style.display='none';document.getElementById('axMonitoringContainer').classList.add('hidden');">←</span>
       ${typeInfo.emoji} ${ws.name}
     `;
 
+    // AX 워크숍인 경우 AXAdmin으로 위임
+    if (ws.type === 'ax-redesign' && typeof AXAdmin !== 'undefined') {
+      document.getElementById('teamTableWrapper').style.display = 'none';
+      const axContainer = document.getElementById('axMonitoringContainer');
+      axContainer.classList.remove('hidden');
+      AXAdmin.renderAXMonitoring(workshopId, axContainer);
+      return;
+    }
+
+    document.getElementById('teamTableWrapper').style.display = 'block';
+    document.getElementById('axMonitoringContainer').classList.add('hidden');
     renderTeamTable(ws);
   }
 
@@ -350,8 +408,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // Keep dark by default for admin
   }
 
+  // ── Sync from Firestore ──
+  async function syncFromFirestore() {
+    try {
+      if (typeof db === 'undefined' || !db) return;
+      const snap = await db.collection('workshops').where('status', '==', 'active').get();
+      const remote = snap.docs.map(d => {
+        const data = d.data();
+        return {
+          ...data,
+          id: data.id || d.id,
+          createdAt: typeof data.createdAt === 'string' ? data.createdAt : new Date().toISOString(),
+        };
+      });
+      // merge: remote 우선, 로컬 전용은 유지
+      const remoteIds = new Set(remote.map(w => w.id));
+      const localOnly = workshops.filter(w => !remoteIds.has(w.id));
+      workshops = [...remote, ...localOnly];
+      saveWorkshops();
+      renderWorkshopList();
+      updateStats();
+    } catch (err) {
+      console.warn('Firestore 동기화 실패 (로컬 데이터 사용):', err);
+    }
+  }
+
   // ── Init ──
   initFirebase();
   renderWorkshopList();
   updateStats();
+  syncFromFirestore();
 });
