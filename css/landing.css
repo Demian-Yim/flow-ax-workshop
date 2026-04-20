@@ -326,14 +326,17 @@ body > * { position: relative; z-index: 1; }
   font-family: var(--display);
   font-weight: 600;
   font-size: clamp(52px, 11vw, 200px);
-  line-height: 0.9;
-  letter-spacing: -0.045em;
+  line-height: 1.05;                    /* was 0.9 — descenders were clipping */
+  letter-spacing: -0.03em;
   color: var(--ink);
   display: flex;
   flex-direction: column;
-  gap: 0.02em;
+  gap: 0.04em;
 }
-.wordmark__row { display: block; }
+.wordmark__row {
+  display: block;
+  padding-bottom: 0.08em;               /* safety for descenders with background-clip:text */
+}
 .wordmark__tilde {
   font-family: var(--serif);
   font-style: italic;
@@ -349,7 +352,9 @@ body > * { position: relative; z-index: 1; }
   -webkit-text-fill-color: transparent;
   color: transparent;
   font-weight: 700;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.025em;
+  line-height: 1.15;                    /* extra room for gradient-clipped descenders */
+  padding-bottom: 0.12em;
 }
 
 .hero__lede {
@@ -530,23 +535,30 @@ body > * { position: relative; z-index: 1; }
 }
 .service-block__title {
   grid-area: title;
-  margin: 0 0 var(--sp-3);
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: clamp(44px, 7.5vw, 120px);
-  line-height: 0.95;
-  letter-spacing: -0.035em;
-  color: var(--ink);
+  margin: 0 0 var(--sp-4);
+  font-family: 'Pretendard', var(--display);     /* Pretendard for Korean */
+  font-weight: 500;                              /* lighter tail, so em pops */
+  font-size: clamp(40px, 6.5vw, 96px);
+  line-height: 1.1;                              /* 0.95 was clipping Korean descenders */
+  letter-spacing: -0.015em;                      /* was -0.035em — too tight for Korean */
+  color: var(--ink-soft);                        /* softer tail */
+  display: inline-block;
+  padding-bottom: 0.08em;
 }
+/* Emphasized noun dominates: bigger, bolder, gradient */
 .service-block__title em {
-  font-family: var(--serif);
-  font-style: italic;
-  font-weight: 400;
+  font-family: 'Pretendard', var(--display);
+  font-style: normal;                            /* italic made it feel weaker */
+  font-weight: 800;                              /* boldest */
+  font-size: 1.35em;                             /* MUCH bigger than tail */
   background: var(--grad-accent);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  padding: 0 0.02em;
+  padding: 0 0.06em 0.1em 0;                     /* right space + descender safety */
+  letter-spacing: -0.02em;
+  display: inline-block;
+  vertical-align: baseline;
 }
 .service-block__detail {
   grid-area: detail;
@@ -568,28 +580,37 @@ body > * { position: relative; z-index: 1; }
   grid-column: 2;
   list-style: none;
   margin: 0;
-  padding: 0 0 0 var(--sp-5);
-  border-left: 1px solid var(--line);
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--paper-alt);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
-  font-family: var(--mono);
-  font-size: 12px;
-  color: var(--ink-mute);
+  gap: var(--sp-3);
+  font-family: 'Pretendard', var(--display);    /* sans Korean, not mono */
+  font-size: 14px;
+  color: var(--ink);
+  box-shadow: var(--shadow-s);
 }
 .service-block__meta li {
   display: grid;
-  grid-template-columns: 64px 1fr;
-  gap: var(--sp-3);
+  grid-template-columns: 72px 1fr;
+  gap: var(--sp-4);
+  align-items: baseline;
   line-height: 1.5;
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px dashed var(--line);
 }
+.service-block__meta li:last-child { border-bottom: none; padding-bottom: 0; }
 .service-block__meta strong {
+  font-family: var(--mono);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   font-size: 10px;
-  color: var(--ink);
-  padding-top: 2px;
+  color: var(--accent);                        /* label in brand accent, high-visibility */
+  padding: 0;
+  white-space: nowrap;
 }
 .service-block__cta {
   grid-column: 1 / -1;
