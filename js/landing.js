@@ -86,17 +86,25 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Enter Button ──
   enterBtn.addEventListener('click', handleEnter);
 
+  function withTimeout(promise, ms, label) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} 타임아웃 (${ms/1000}s)`)), ms))
+    ]);
+  }
+
   async function handleEnter() {
     const code = getCode();
     if (code.length < 4) return;
 
     enterBtn.disabled = true;
-    enterBtn.textContent = '⏳ 접속 중...';
+    const originalInnerHTML = enterBtn.innerHTML;
+    enterBtn.innerHTML = '<span>⏳ 접속 중...</span>';
 
     try {
-      // Firebase가 설정되어 있으면 실제 조회
+      // Firebase가 설정되어 있으면 실제 조회 (8초 타임아웃)
       if (typeof db !== 'undefined' && db) {
-        const workshop = await getWorkshopByCode(code);
+        const workshop = await withTimeout(getWorkshopByCode(code), 8000, 'Firestore 코드 조회');
         if (workshop) {
           // 세션 저장 후 대시보드로 이동
           sessionStorage.setItem('workshopId', workshop.id);
@@ -140,11 +148,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (err) {
       console.error('입장 실패:', err);
-      showToast('접속 중 오류가 발생했습니다.', 'error');
+      showToast(`접속 실패: ${err.message || err}`, 'error', 5000);
     }
 
     enterBtn.disabled = false;
-    enterBtn.textContent = '🚀 입장하기';
+    enterBtn.innerHTML = originalInnerHTML;
   }
 
   // ── Admin Modal ──

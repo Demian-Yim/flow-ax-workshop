@@ -160,7 +160,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }, duration);
   };
 
+  // ── Firestore 동기화 (제출된 팀 포함) ──
+  async function syncFromFirestore() {
+    try {
+      if (typeof db === 'undefined' || !db) return;
+      const wsSnap = await Promise.race([
+        db.collection('workshops').where('status', '==', 'active').get(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))
+      ]);
+
+      const remoteWorkshops = [];
+      for (const wsDoc of wsSnap.docs) {
+        const wsData = wsDoc.data();
+        const teamsSnap = await wsDoc.ref.collection('teams').get();
+        const teams = teamsSnap.docs.map(t => ({ id: t.id, ...t.data() }));
+        remoteWorkshops.push({
+          ...wsData,
+          id: wsData.id || wsDoc.id,
+          teams,
+          rounds: wsData.rounds && wsData.rounds.length ? wsData.rounds : getDefaultRounds(wsData.type || 'hackathon'),
+        });
+      }
+
+      const remoteIds = new Set(remoteWorkshops.map(w => w.id));
+      const localOnly = workshops.filter(w => !remoteIds.has(w.id));
+      workshops = [...remoteWorkshops, ...localOnly];
+      localStorage.setItem('flow-workshops', JSON.stringify(workshops));
+      renderGallery();
+    } catch (err) {
+      console.warn('Gallery Firestore 동기화 실패:', err);
+    }
+  }
+
   // ── Init ──
   initFirebase();
   renderGallery();
+  syncFromFirestore();
 });

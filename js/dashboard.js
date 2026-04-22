@@ -13,6 +13,14 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentTeam = JSON.parse(sessionStorage.getItem('currentTeam') || 'null');
   let workshops = JSON.parse(localStorage.getItem('flow-workshops') || '[]');
 
+  // 타임아웃 래퍼 (Firestore hang 방지)
+  function withTimeout(promise, ms, label) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} 타임아웃 (${ms/1000}s)`)), ms))
+    ]);
+  }
+
   // ── Elements ──
   const teamSetupPhase = document.getElementById('teamSetupPhase');
   const sprintPhase = document.getElementById('sprintPhase');
@@ -38,12 +46,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Create team
-  document.getElementById('confirmCreateTeam').addEventListener('click', () => {
+  document.getElementById('confirmCreateTeam').addEventListener('click', async () => {
     const teamName = document.getElementById('newTeamName').value.trim();
     const memberName = document.getElementById('newMemberName').value.trim();
 
     if (!teamName) { showToast('팀 이름을 입력해주세요.', 'warning'); return; }
     if (!memberName) { showToast('이름을 입력해주세요.', 'warning'); return; }
+
+    const btn = document.getElementById('confirmCreateTeam');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ 생성 중...';
 
     const pin = generateTeamPin();
     currentTeam = {
@@ -56,48 +69,111 @@ document.addEventListener('DOMContentLoaded', () => {
       submission: null,
     };
 
-    // Save to workshop
+    // 1) Firestore 저장 (관리자 모니터링 연동)
+    try {
+      if (typeof db !== 'undefined' && db && workshopData?.id && !workshopData.demo) {
+        await withTimeout(
+          db.collection('workshops').doc(workshopData.id)
+            .collection('teams').doc(currentTeam.id)
+            .set({ ...currentTeam, createdAt: firebase.firestore.FieldValue.serverTimestamp() }),
+          8000, 'Firestore 팀 저장'
+        );
+      }
+    } catch (err) {
+      console.warn('Firestore 팀 저장 실패 (로컬만 저장):', err);
+      showToast(`⚠️ 클라우드 연결 실패 — 로컬에만 저장됨`, 'warning', 4000);
+    }
+
+    // 2) 로컬 저장
     const wsIndex = workshops.findIndex(w => w.id === workshopData.id);
     if (wsIndex >= 0) {
+      workshops[wsIndex].teams = workshops[wsIndex].teams || [];
       workshops[wsIndex].teams.push(currentTeam);
       localStorage.setItem('flow-workshops', JSON.stringify(workshops));
     }
 
     sessionStorage.setItem('currentTeam', JSON.stringify(currentTeam));
+    sessionStorage.setItem('memberName', memberName);
+    btn.disabled = false;
+    btn.textContent = originalText;
     showToast(`팀 "${teamName}" 생성! PIN: ${pin}`, 'success');
     showSprintPhase();
   });
 
   // Join team
-  document.getElementById('confirmJoinTeam').addEventListener('click', () => {
+  document.getElementById('confirmJoinTeam').addEventListener('click', async () => {
     const pin = document.getElementById('teamPin').value.trim();
     const memberName = document.getElementById('joinMemberName').value.trim();
 
     if (!pin || pin.length !== 4) { showToast('4자리 PIN을 입력해주세요.', 'warning'); return; }
     if (!memberName) { showToast('이름을 입력해주세요.', 'warning'); return; }
 
-    // Find team by PIN
-    let foundTeam = null;
-    let foundWsIndex = -1;
-    let foundTeamIndex = -1;
+    const btn = document.getElementById('confirmJoinTeam');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '⏳ 검색 중...';
 
-    workshops.forEach((ws, wi) => {
-      (ws.teams || []).forEach((t, ti) => {
-        if (t.pin === pin) {
-          foundTeam = t;
-          foundWsIndex = wi;
-          foundTeamIndex = ti;
+    let foundTeam = null;
+    let foundTeamDocRef = null;
+
+    // 1) Firestore에서 PIN으로 팀 검색 (크로스 디바이스)
+    try {
+      if (typeof db !== 'undefined' && db && workshopData?.id && !workshopData.demo) {
+        const snap = await withTimeout(
+          db.collection('workshops').doc(workshopData.id)
+            .collection('teams').where('pin', '==', pin).limit(1).get(),
+          8000, 'Firestore 팀 검색'
+        );
+        if (!snap.empty) {
+          const doc = snap.docs[0];
+          foundTeam = { id: doc.id, ...doc.data() };
+          foundTeamDocRef = doc.ref;
         }
+      }
+    } catch (err) {
+      console.warn('Firestore 팀 검색 실패, 로컬 폴백:', err);
+    }
+
+    // 2) 로컬 폴백 (Firestore에 없을 때)
+    if (!foundTeam) {
+      let foundWsIndex = -1, foundTeamIndex = -1;
+      workshops.forEach((ws, wi) => {
+        (ws.teams || []).forEach((t, ti) => {
+          if (t.pin === pin && ws.id === workshopData.id) {
+            foundTeam = t;
+            foundWsIndex = wi;
+            foundTeamIndex = ti;
+          }
+        });
       });
-    });
+      if (foundTeam) {
+        if (!foundTeam.members.includes(memberName)) foundTeam.members.push(memberName);
+        workshops[foundWsIndex].teams[foundTeamIndex] = foundTeam;
+        localStorage.setItem('flow-workshops', JSON.stringify(workshops));
+      }
+    } else {
+      // Firestore에서 찾은 경우 — members 배열에 추가 업데이트
+      if (!foundTeam.members) foundTeam.members = [];
+      if (!foundTeam.members.includes(memberName)) {
+        foundTeam.members.push(memberName);
+        try {
+          await withTimeout(
+            foundTeamDocRef.update({ members: foundTeam.members }),
+            8000, 'Firestore 합류'
+          );
+        } catch (err) {
+          console.warn('Firestore 합류 저장 실패:', err);
+        }
+      }
+    }
+
+    btn.disabled = false;
+    btn.textContent = originalText;
 
     if (foundTeam) {
-      foundTeam.members.push(memberName);
-      workshops[foundWsIndex].teams[foundTeamIndex] = foundTeam;
-      localStorage.setItem('flow-workshops', JSON.stringify(workshops));
-      
       currentTeam = foundTeam;
       sessionStorage.setItem('currentTeam', JSON.stringify(currentTeam));
+      sessionStorage.setItem('memberName', memberName);
       showToast(`"${foundTeam.name}" 팀에 합류했습니다!`, 'success');
       showSprintPhase();
     } else {
@@ -157,9 +233,18 @@ document.addEventListener('DOMContentLoaded', () => {
             ` : ''}
             ${status === 'active' ? `
               <div class="step-card__actions">
-                <button class="btn btn-primary btn-sm" onclick="completeStep(${stepNum})">
-                  ✅ 이 단계 완료
-                </button>
+                ${round.hasForm ? `
+                  <button class="btn btn-primary btn-sm" onclick="openAXPhaseForm('${round.phaseId}', ${stepNum})">
+                    📝 작성하기
+                  </button>
+                  <button class="btn btn-ghost btn-sm" onclick="completeStep(${stepNum})" style="margin-left:6px;">
+                    ✅ 완료
+                  </button>
+                ` : `
+                  <button class="btn btn-primary btn-sm" onclick="completeStep(${stepNum})">
+                    ✅ 이 단계 완료
+                  </button>
+                `}
               </div>
             ` : ''}
           </div>
@@ -168,8 +253,71 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('');
   }
 
+  // ── AX Summary ──
+  async function showAXSummary() {
+    const container = document.getElementById('axPhaseFormContainer');
+    if (!container) return;
+    container.classList.remove('hidden');
+    const memberId = sessionStorage.getItem('memberName') || currentTeam?.members?.[0] || 'participant';
+    const phases = ['phase-0', 'phase-1', 'phase-1-2', 'phase-2', 'phase-5'];
+    const allData = {};
+    for (const p of phases) {
+      allData[p] = await getPhaseResponse(workshopData.id, currentTeam.id, memberId, p);
+    }
+    AXPhases.renderSummary(container, allData);
+    const sub = document.getElementById('submissionSection');
+    if (sub && workshopData.type === 'ax-redesign') sub.classList.add('hidden');
+  }
+
+  // ── AX Phase Form ──
+  window.openAXPhaseForm = async function(phaseId, stepNum) {
+    const container = document.getElementById('axPhaseFormContainer');
+    if (!container) return;
+    container.classList.remove('hidden');
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    const memberId = sessionStorage.getItem('memberName') || currentTeam?.members?.[0] || 'participant';
+    const context = {
+      workshopId: workshopData?.id,
+      teamId: currentTeam?.id,
+      memberId,
+    };
+
+    if (phaseId === 'phase-1-2') {
+      const p1 = await getPhaseResponse(context.workshopId, context.teamId, memberId, 'phase-1');
+      if (p1?.data) {
+        const tasks = [];
+        for (let i = 1; i <= 7; i++) {
+          const name = p1.data[`task_${i}_name`];
+          const ai = parseInt(p1.data[`task_${i}_ai`]) || 0;
+          if (name && ai >= 2) tasks.push({ name, ai });
+        }
+        context.phase1Tasks = tasks;
+      }
+    }
+
+    if (phaseId === 'phase-2') {
+      const p12 = await getPhaseResponse(context.workshopId, context.teamId, memberId, 'phase-1-2');
+      if (p12?.data) {
+        let bestName = '', bestScore = 0;
+        for (let i = 1; i <= 10; i++) {
+          const name = p12.data[`icep_${i}_name`];
+          const I = parseFloat(p12.data[`icep_${i}_I`]) || 0;
+          const C = parseFloat(p12.data[`icep_${i}_C`]) || 0;
+          const E = parseFloat(p12.data[`icep_${i}_E`]) || 0;
+          const P = parseFloat(p12.data[`icep_${i}_P`]) || 0;
+          const score = I * 0.3 + C * 0.2 + E * 0.2 + P * 0.3;
+          if (name && score > bestScore) { bestScore = score; bestName = name; }
+        }
+        context.icepTop1 = bestName;
+      }
+    }
+
+    await AXPhases.renderPhaseForm(phaseId, container, context);
+  };
+
   // ── Complete Step ──
-  window.completeStep = function(stepNum) {
+  window.completeStep = async function(stepNum) {
     const rounds = workshopData.rounds || [];
     if (stepNum < rounds.length) {
       currentTeam.currentStep = stepNum + 1;
@@ -179,9 +327,24 @@ document.addEventListener('DOMContentLoaded', () => {
       currentTeam.progress = 100;
     }
 
-    // Update local storage
+    // Firestore 진행도 업데이트
+    try {
+      if (typeof db !== 'undefined' && db && workshopData?.id && !workshopData.demo) {
+        await withTimeout(
+          db.collection('workshops').doc(workshopData.id)
+            .collection('teams').doc(currentTeam.id)
+            .update({ currentStep: currentTeam.currentStep, progress: currentTeam.progress }),
+          5000, 'Firestore 진행도'
+        );
+      }
+    } catch (err) {
+      console.warn('Firestore 진행도 업데이트 실패:', err);
+    }
+
+    // 로컬 저장
     const wsIndex = workshops.findIndex(w => w.id === workshopData.id);
     if (wsIndex >= 0) {
+      workshops[wsIndex].teams = workshops[wsIndex].teams || [];
       const teamIndex = workshops[wsIndex].teams.findIndex(t => t.id === currentTeam.id);
       if (teamIndex >= 0) {
         workshops[wsIndex].teams[teamIndex] = currentTeam;
@@ -190,6 +353,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     sessionStorage.setItem('currentTeam', JSON.stringify(currentTeam));
+
+    // AX Phase 완료 마킹
+    const round = (workshopData.rounds || [])[stepNum - 1];
+    if (round?.hasForm && round.phaseId) {
+      const memberId = sessionStorage.getItem('memberName') || currentTeam?.members?.[0] || 'participant';
+      completePhaseResponse(workshopData.id, currentTeam.id, memberId, round.phaseId);
+      const formContainer = document.getElementById('axPhaseFormContainer');
+      if (formContainer) formContainer.classList.add('hidden');
+    }
+
+    // 전체 완료 시 요약 뷰
+    if (currentTeam.progress >= 100 && workshopData.type === 'ax-redesign') {
+      showAXSummary();
+    }
+
     renderSteps();
     updateProgress();
     showToast(`Step ${stepNum} 완료! 🎉`, 'success');
@@ -206,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ── Submit Project ──
-  document.getElementById('submitProjectBtn').addEventListener('click', () => {
+  document.getElementById('submitProjectBtn').addEventListener('click', async () => {
     const submission = {
       serviceName: document.getElementById('subServiceName').value.trim(),
       tagline: document.getElementById('subTagline').value.trim(),
@@ -222,12 +400,34 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
+    const btn = document.getElementById('submitProjectBtn');
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = '⏳ 제출 중...';
+
     currentTeam.submission = submission;
     currentTeam.progress = 100;
 
-    // Update local storage
+    // Firestore 제출
+    let firestoreOk = false;
+    try {
+      if (typeof db !== 'undefined' && db && workshopData?.id && !workshopData.demo) {
+        await withTimeout(
+          db.collection('workshops').doc(workshopData.id)
+            .collection('teams').doc(currentTeam.id)
+            .update({ submission, progress: 100 }),
+          8000, 'Firestore 제출'
+        );
+        firestoreOk = true;
+      }
+    } catch (err) {
+      console.warn('Firestore 제출 실패:', err);
+    }
+
+    // 로컬 저장
     const wsIndex = workshops.findIndex(w => w.id === workshopData.id);
     if (wsIndex >= 0) {
+      workshops[wsIndex].teams = workshops[wsIndex].teams || [];
       const teamIndex = workshops[wsIndex].teams.findIndex(t => t.id === currentTeam.id);
       if (teamIndex >= 0) {
         workshops[wsIndex].teams[teamIndex] = currentTeam;
@@ -236,8 +436,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     sessionStorage.setItem('currentTeam', JSON.stringify(currentTeam));
+    btn.disabled = false;
+    btn.textContent = originalText;
     updateProgress();
-    showToast('🎉 결과물이 성공적으로 제출되었습니다!', 'success', 5000);
+    showToast(firestoreOk ? '🎉 결과물이 성공적으로 제출되었습니다!' : '⚠️ 로컬만 저장됨 (네트워크 확인)', firestoreOk ? 'success' : 'warning', 5000);
   });
 
   // ── Share Team PIN ──
