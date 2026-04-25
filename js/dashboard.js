@@ -208,6 +208,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 팀 정보 실시간 구독 시작
     subscribeToTeam();
+    subscribeToWorkshop();
+  }
+
+  // ── 워크샵 문서 구독 (강사 라운드 브로드캐스트 수신) ──
+  let workshopUnsubscribe = null;
+  let lastBroadcastRound = workshopData?.currentRound || 1;
+  function subscribeToWorkshop() {
+    if (workshopUnsubscribe) { try { workshopUnsubscribe(); } catch (e) {} workshopUnsubscribe = null; }
+    if (typeof db === 'undefined' || !db || !workshopData?.id || workshopData.demo) return;
+    try {
+      workshopUnsubscribe = db.collection('workshops').doc(workshopData.id)
+        .onSnapshot(doc => {
+          if (!doc.exists) return;
+          const remote = doc.data();
+          const newRound = remote.currentRound || 1;
+          if (newRound !== lastBroadcastRound && newRound !== (workshopData.currentRound || 1)) {
+            const roundName = (workshopData.rounds || [])[newRound - 1]?.name || `Step ${newRound}`;
+            showToast(`📡 강사 안내: 모두 "${roundName}" 단계로 진행해 주세요`, 'info', 8000);
+            workshopData.currentRound = newRound;
+            sessionStorage.setItem('workshopData', JSON.stringify(workshopData));
+            lastBroadcastRound = newRound;
+            highlightRecommendedStep(newRound);
+          }
+        }, err => console.warn('워크샵 구독 실패:', err));
+    } catch (err) {
+      console.warn('워크샵 onSnapshot 시작 실패:', err);
+    }
+  }
+
+  function highlightRecommendedStep(stepNum) {
+    const cards = document.querySelectorAll('.step-card');
+    cards.forEach(c => c.classList.remove('step-card--recommended'));
+    const target = document.querySelector(`.step-card[data-step="${stepNum}"]`);
+    if (target) {
+      target.classList.add('step-card--recommended');
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 
   // ── Team Members 렌더 ──
@@ -300,6 +337,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     ✅ 이 단계 완료
                   </button>
                 `}
+              </div>
+            ` : ''}
+            ${(status === 'completed' && round.hasForm) ? `
+              <div class="step-card__actions">
+                <button class="btn btn-ghost btn-sm" onclick="openAXPhaseForm('${round.phaseId}', ${stepNum})">
+                  📖 다시 보기 / 수정
+                </button>
+              </div>
+            ` : ''}
+            ${(status === 'locked' && round.hasForm) ? `
+              <div class="step-card__actions">
+                <button class="btn btn-ghost btn-sm" onclick="openAXPhaseForm('${round.phaseId}', ${stepNum})" style="opacity:0.7;" title="늦게 합류한 경우 미리 작성 가능">
+                  ✍️ 먼저 작성
+                </button>
               </div>
             ` : ''}
           </div>

@@ -303,10 +303,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('monitoringHeader').style.display = 'block';
 
     const typeInfo = getWorkshopTypeLabel(ws.type);
+    const roundsCount = (ws.rounds || []).length;
     document.getElementById('monitorWorkshopName').innerHTML = `
       <span style="cursor:pointer" onclick="document.getElementById('monitorWorkshopSelect').value='';document.getElementById('monitoringEmpty').style.display='block';document.getElementById('monitoringHeader').style.display='none';document.getElementById('teamTableWrapper').style.display='none';document.getElementById('axMonitoringContainer').classList.add('hidden');if(window.__monUnsub){try{window.__monUnsub();}catch(e){}window.__monUnsub=null;}">←</span>
       ${typeInfo.emoji} ${ws.name}
       <span style="margin-left:12px;font-size:12px;font-weight:500;color:var(--c-secondary);" id="liveDot">● LIVE</span>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;font-weight:400;">
+        <span style="color:var(--t-secondary);">📡 강사 진행 통제:</span>
+        <button class="btn btn-ghost btn-sm" onclick="broadcastRound('${ws.id}', -1)" title="이전 단계로 모두 안내">◀ 이전</button>
+        <span style="font-weight:600;color:var(--c-primary);">현재 라운드: <span id="currentRoundDisplay">${ws.currentRound || 1}</span> / ${roundsCount}</span>
+        <button class="btn btn-primary btn-sm" onclick="broadcastRound('${ws.id}', 1)" title="다음 단계로 모두 안내">다음 ▶</button>
+        <span style="color:var(--t-muted);font-size:11px;">참가자 화면에 토스트 안내가 표시됩니다</span>
+      </div>
     `;
 
     // AX 워크숍인 경우 AXAdmin으로 위임
@@ -416,6 +424,36 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }).join('');
   }
+
+  // ── Round Broadcast (강사 → 모든 참가자 진행 안내) ──
+  window.broadcastRound = async function(workshopId, delta) {
+    const ws = workshops.find(w => w.id === workshopId);
+    if (!ws) return;
+    const total = (ws.rounds || []).length;
+    const next = Math.max(1, Math.min(total, (ws.currentRound || 1) + delta));
+    if (next === ws.currentRound) {
+      showToast(`이미 ${delta > 0 ? '마지막' : '첫'} 라운드입니다.`, 'info');
+      return;
+    }
+    try {
+      if (typeof db !== 'undefined' && db) {
+        await withTimeout(
+          db.collection('workshops').doc(workshopId)
+            .update({ currentRound: next, lastRoundChangeAt: firebase.firestore.FieldValue.serverTimestamp() }),
+          8000, '라운드 브로드캐스트'
+        );
+      }
+      ws.currentRound = next;
+      const wsIdx = workshops.findIndex(w => w.id === workshopId);
+      if (wsIdx >= 0) { workshops[wsIdx].currentRound = next; saveWorkshops(); }
+      const disp = document.getElementById('currentRoundDisplay');
+      if (disp) disp.textContent = next;
+      const roundName = (ws.rounds || [])[next - 1]?.name || `Step ${next}`;
+      showToast(`📡 라운드 ${next} (${roundName}) 으로 전체 안내됨`, 'success', 4000);
+    } catch (err) {
+      showToast(`브로드캐스트 실패: ${err.message || err}`, 'error', 5000);
+    }
+  };
 
   // ── Team Detail View ──
   window.viewTeamDetail = function(workshopId, teamId) {

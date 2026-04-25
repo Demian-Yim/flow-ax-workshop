@@ -100,33 +100,76 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('');
   }
 
-  // ── Vote Toggle ──
-  window.toggleVote = function(teamId) {
+  // ── Vote Toggle (Firestore atomic increment + localStorage 폴백) ──
+  window.toggleVote = async function(teamId) {
     const index = votedTeams.indexOf(teamId);
-    
-    // Find team in workshops
+    const adding = index === -1;
+    const delta = adding ? 1 : -1;
+
+    // 어느 워크샵의 팀인지 찾기
+    let targetWs = null, targetTeam = null;
     workshops.forEach(ws => {
       (ws.teams || []).forEach(team => {
-        if (team.id === teamId) {
-          if (index === -1) {
-            // Add vote
-            team.votes = (team.votes || 0) + 1;
-            votedTeams.push(teamId);
-            showToast('❤️ 투표 완료!', 'success');
-          } else {
-            // Remove vote
-            team.votes = Math.max(0, (team.votes || 0) - 1);
-            votedTeams.splice(index, 1);
-            showToast('투표가 취소되었습니다.', 'info');
-          }
-        }
+        if (team.id === teamId) { targetWs = ws; targetTeam = team; }
       });
     });
+    if (!targetWs || !targetTeam) { showToast('팀을 찾을 수 없습니다.', 'error'); return; }
 
+    // 1) Firestore atomic increment
+    let firestoreOk = false;
+    try {
+      if (typeof db !== 'undefined' && db && firebase?.firestore?.FieldValue) {
+        await Promise.race([
+          db.collection('workshops').doc(targetWs.id)
+            .collection('teams').doc(teamId)
+            .update({ votes: firebase.firestore.FieldValue.increment(delta) }),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('투표 타임아웃')), 6000))
+        ]);
+        firestoreOk = true;
+      }
+    } catch (err) {
+      console.warn('Firestore 투표 실패 (로컬만 반영):', err);
+    }
+
+    // 2) 로컬 상태 갱신 (낙관적 업데이트 + 폴백)
+    targetTeam.votes = Math.max(0, (targetTeam.votes || 0) + delta);
+    if (adding) votedTeams.push(teamId); else votedTeams.splice(index, 1);
     localStorage.setItem('flow-workshops', JSON.stringify(workshops));
     localStorage.setItem('flow-voted-teams', JSON.stringify(votedTeams));
     renderGallery();
+
+    if (firestoreOk) {
+      showToast(adding ? '❤️ 투표 완료! (실시간 동기화)' : '투표가 취소되었습니다.', adding ? 'success' : 'info');
+    } else {
+      showToast(adding ? '❤️ 로컬 투표 (네트워크 확인)' : '취소됨', 'warning', 3000);
+    }
   };
+
+  // ── 투표 카운트 실시간 구독 (다른 디바이스 투표도 즉시 반영) ──
+  let voteUnsubs = [];
+  function subscribeToVotes() {
+    voteUnsubs.forEach(u => { try { u(); } catch (e) {} });
+    voteUnsubs = [];
+    if (typeof db === 'undefined' || !db) return;
+    workshops.forEach(ws => {
+      try {
+        const unsub = db.collection('workshops').doc(ws.id)
+          .collection('teams')
+          .onSnapshot(snap => {
+            const teams = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const wsIdx = workshops.findIndex(w => w.id === ws.id);
+            if (wsIdx >= 0) {
+              workshops[wsIdx].teams = teams;
+              localStorage.setItem('flow-workshops', JSON.stringify(workshops));
+              renderGallery();
+            }
+          }, err => console.warn(`갤러리 투표 구독 실패(${ws.id}):`, err));
+        voteUnsubs.push(unsub);
+      } catch (err) {
+        console.warn('투표 onSnapshot 시작 실패:', err);
+      }
+    });
+  }
 
   // ── Filters ──
   const filterBtns = document.querySelectorAll('.filter-btn');
@@ -195,5 +238,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Init ──
   initFirebase();
   renderGallery();
-  syncFromFirestore();
+  syncFromFirestore().then(() => {
+    // 초기 sync 완료 후 실시간 투표 구독 시작
+    subscribeToVotes();
+  }).catch(() => {
+    // sync 실패해도 로컬 데이터로 구독 시도
+    subscribeToVotes();
+  });
 });
