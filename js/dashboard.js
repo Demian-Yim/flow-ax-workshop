@@ -197,9 +197,64 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('teamDisplay').textContent = `팀: ${currentTeam.name}`;
     document.getElementById('teamPinDisplay').textContent = currentTeam.pin;
 
+    const codeEl = document.getElementById('workshopCodeDisplay');
+    if (codeEl) codeEl.textContent = workshopData.code || '----';
+
+    renderTeamMembers();
+
     // Render steps
     renderSteps();
     updateProgress();
+
+    // 팀 정보 실시간 구독 시작
+    subscribeToTeam();
+  }
+
+  // ── Team Members 렌더 ──
+  function renderTeamMembers() {
+    const el = document.getElementById('teamMembersLive');
+    if (!el || !currentTeam) return;
+    const members = currentTeam.members || [];
+    const dot = document.getElementById('liveSyncDot');
+    el.innerHTML = members.length
+      ? `👥 팀원 (${members.length}): ${members.map(m => `<span class="member-chip" style="display:inline-block;padding:3px 10px;background:rgba(107,92,229,0.12);border-radius:12px;margin-right:6px;color:var(--t-primary);font-weight:500;">${m}</span>`).join('')}`
+      : '<span style="color:var(--t-muted);">팀원 없음 — PIN을 공유해 합류받으세요</span>';
+    if (dot) { dot.textContent = '● LIVE'; dot.style.color = 'var(--c-secondary)'; }
+  }
+
+  // ── 팀 정보 실시간 구독 (멤버 합류, 다른 디바이스 진행도 동기화) ──
+  let teamUnsubscribe = null;
+  function subscribeToTeam() {
+    if (teamUnsubscribe) { try { teamUnsubscribe(); } catch (e) {} teamUnsubscribe = null; }
+    if (typeof db === 'undefined' || !db || !workshopData?.id || workshopData.demo || !currentTeam?.id) return;
+    try {
+      teamUnsubscribe = db.collection('workshops').doc(workshopData.id)
+        .collection('teams').doc(currentTeam.id)
+        .onSnapshot(doc => {
+          if (!doc.exists) return;
+          const remoteTeam = { id: doc.id, ...doc.data() };
+          // 본인의 진행 중 데이터를 잃지 않기 위해 members와 progress만 반영
+          const wasProgress = currentTeam.progress;
+          const wasStep = currentTeam.currentStep;
+          currentTeam = {
+            ...currentTeam,
+            ...remoteTeam,
+            // 본인 진행도가 더 앞이면 유지 (race 방지)
+            currentStep: Math.max(wasStep || 1, remoteTeam.currentStep || 1),
+            progress: Math.max(wasProgress || 0, remoteTeam.progress || 0),
+          };
+          sessionStorage.setItem('currentTeam', JSON.stringify(currentTeam));
+          renderTeamMembers();
+          renderSteps();
+          updateProgress();
+        }, err => {
+          console.warn('팀 실시간 구독 실패:', err);
+          const dot = document.getElementById('liveSyncDot');
+          if (dot) { dot.textContent = '○ OFFLINE'; dot.style.color = 'var(--c-warning)'; }
+        });
+    } catch (err) {
+      console.warn('팀 onSnapshot 시작 실패:', err);
+    }
   }
 
   // ── Render Steps ──

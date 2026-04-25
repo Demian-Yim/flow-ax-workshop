@@ -168,7 +168,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     list.innerHTML = workshops.map(ws => {
       const typeInfo = getWorkshopTypeLabel(ws.type);
-      const teamCount = ws.teams ? ws.teams.length : 0;
+      const teams = ws.teams || [];
+      const teamCount = teams.length;
+      const memberCount = teams.reduce((s, t) => s + (t.members ? t.members.length : 0), 0);
+      const submittedCount = teams.filter(t => t.submission).length;
+      const avgProgress = teamCount > 0 ? Math.round(teams.reduce((s, t) => s + (t.progress || 0), 0) / teamCount) : 0;
       return `
         <div class="workshop-item">
           <div class="workshop-item__info">
@@ -178,16 +182,17 @@ document.addEventListener('DOMContentLoaded', () => {
               <span class="badge badge-${typeInfo.color}">${typeInfo.label}</span>
             </div>
             <div class="workshop-item__meta">
-              <span>👥 ${teamCount}개 팀</span>
+              <span>👥 ${teamCount}팀 · ${memberCount}명</span>
+              <span>📤 제출 ${submittedCount}/${teamCount}</span>
+              <span>📊 평균 ${avgProgress}%</span>
               <span>📅 ${new Date(ws.createdAt).toLocaleDateString('ko-KR')}</span>
-              <span>${(ws.rounds || []).length}단계 스프린트</span>
             </div>
           </div>
-          <div class="workshop-item__code" onclick="copyCode('${ws.code}')" title="클릭하여 복사">
+          <div class="workshop-item__code" onclick="copyCode('${ws.code}')" title="클릭하여 복사 — 참가자에게 이 코드를 공유하세요">
             ${ws.code}
           </div>
           <div class="action-btns">
-            <button class="action-btn" onclick="viewWorkshop('${ws.id}')" title="모니터링">📊</button>
+            <button class="action-btn" onclick="viewWorkshop('${ws.id}')" title="실시간 모니터링">📊</button>
             <button class="action-btn action-btn--danger" onclick="deleteWorkshop('${ws.id}')" title="삭제">🗑️</button>
           </div>
         </div>
@@ -281,18 +286,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ── Load Team Monitoring ──
+  // ── Load Team Monitoring (실시간 구독) ──
+  let monitoringUnsubscribe = null;
+
   function loadTeamMonitoring(workshopId) {
     const ws = workshops.find(w => w.id === workshopId);
     if (!ws) return;
+
+    // 이전 구독 정리
+    if (monitoringUnsubscribe) {
+      try { monitoringUnsubscribe(); } catch (e) { /* noop */ }
+      monitoringUnsubscribe = null;
+    }
 
     document.getElementById('monitoringEmpty').style.display = 'none';
     document.getElementById('monitoringHeader').style.display = 'block';
 
     const typeInfo = getWorkshopTypeLabel(ws.type);
     document.getElementById('monitorWorkshopName').innerHTML = `
-      <span style="cursor:pointer" onclick="document.getElementById('monitorWorkshopSelect').value='';document.getElementById('monitoringEmpty').style.display='block';document.getElementById('monitoringHeader').style.display='none';document.getElementById('teamTableWrapper').style.display='none';document.getElementById('axMonitoringContainer').classList.add('hidden');">←</span>
+      <span style="cursor:pointer" onclick="document.getElementById('monitorWorkshopSelect').value='';document.getElementById('monitoringEmpty').style.display='block';document.getElementById('monitoringHeader').style.display='none';document.getElementById('teamTableWrapper').style.display='none';document.getElementById('axMonitoringContainer').classList.add('hidden');if(window.__monUnsub){try{window.__monUnsub();}catch(e){}window.__monUnsub=null;}">←</span>
       ${typeInfo.emoji} ${ws.name}
+      <span style="margin-left:12px;font-size:12px;font-weight:500;color:var(--c-secondary);" id="liveDot">● LIVE</span>
     `;
 
     // AX 워크숍인 경우 AXAdmin으로 위임
@@ -301,12 +315,44 @@ document.addEventListener('DOMContentLoaded', () => {
       const axContainer = document.getElementById('axMonitoringContainer');
       axContainer.classList.remove('hidden');
       AXAdmin.renderAXMonitoring(workshopId, axContainer);
-      return;
+    } else {
+      document.getElementById('teamTableWrapper').style.display = 'block';
+      document.getElementById('axMonitoringContainer').classList.add('hidden');
+      renderTeamTable(ws);
     }
 
-    document.getElementById('teamTableWrapper').style.display = 'block';
-    document.getElementById('axMonitoringContainer').classList.add('hidden');
-    renderTeamTable(ws);
+    // Firestore 실시간 구독 (팀 + 진행도 실시간 갱신)
+    if (typeof db !== 'undefined' && db && !workshopId.startsWith('demo-')) {
+      try {
+        monitoringUnsubscribe = db.collection('workshops').doc(workshopId)
+          .collection('teams')
+          .onSnapshot(snapshot => {
+            const teams = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            ws.teams = teams;
+            // 로컬 데이터에도 반영
+            const wsIdx = workshops.findIndex(w => w.id === workshopId);
+            if (wsIdx >= 0) {
+              workshops[wsIdx].teams = teams;
+              saveWorkshops();
+            }
+            // AX 워크숍은 AXAdmin이 자체 렌더, 일반 워크숍은 표 갱신
+            if (ws.type !== 'ax-redesign') {
+              renderTeamTable(ws);
+            } else if (typeof AXAdmin !== 'undefined') {
+              const axContainer = document.getElementById('axMonitoringContainer');
+              if (axContainer) AXAdmin.renderAXMonitoring(workshopId, axContainer);
+            }
+            updateStats();
+          }, err => {
+            console.warn('실시간 팀 구독 실패:', err);
+            const dot = document.getElementById('liveDot');
+            if (dot) { dot.textContent = '○ OFFLINE'; dot.style.color = 'var(--c-warning)'; }
+          });
+        window.__monUnsub = monitoringUnsubscribe;
+      } catch (err) {
+        console.warn('onSnapshot 시작 실패:', err);
+      }
+    }
   }
 
   function renderTeamTable(ws) {
