@@ -238,12 +238,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function highlightRecommendedStep(stepNum) {
-    const cards = document.querySelectorAll('.step-card');
-    cards.forEach(c => c.classList.remove('step-card--recommended'));
-    const target = document.querySelector(`.step-card[data-step="${stepNum}"]`);
+    document.querySelectorAll('.step-tab').forEach(t => t.classList.remove('step-tab--recommended'));
+    const target = document.querySelector(`.step-tab[data-step="${stepNum}"]`);
     if (target) {
-      target.classList.add('step-card--recommended');
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.add('step-tab--recommended');
+      target.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     }
   }
 
@@ -294,70 +293,236 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ── Render Steps ──
+  // ── Tab-based Step UI ──
+  let activeTabIndex = 0; // 0..rounds.length (마지막은 submission)
+
   function renderSteps() {
-    const timeline = document.getElementById('stepsTimeline');
+    const tabs = document.getElementById('stepTabs');
     const rounds = workshopData.rounds || [];
     const currentStep = currentTeam.currentStep || 1;
+    if (!tabs) return;
 
-    timeline.innerHTML = rounds.map((round, index) => {
+    // 활성 탭 초기값: 현재 진행 중인 step
+    if (activeTabIndex === 0 || activeTabIndex >= rounds.length + 1) {
+      activeTabIndex = Math.max(0, currentStep - 1);
+    }
+
+    // 탭 렌더
+    tabs.innerHTML = rounds.map((round, index) => {
       const stepNum = index + 1;
       let status = 'locked';
       if (stepNum < currentStep) status = 'completed';
       else if (stepNum === currentStep) status = 'active';
+      const isActiveTab = index === activeTabIndex;
 
       return `
-        <div class="step-card step-card--${status}" data-step="${stepNum}">
-          <div class="step-card__number">
-            ${status === 'completed' ? '✅' : round.icon || stepNum}
-          </div>
-          <div class="step-card__content">
-            <div class="step-card__title">
-              Step ${stepNum}: ${round.name}
-              ${status === 'active' ? '<span class="badge badge-primary" style="font-size:10px;">현재 단계</span>' : ''}
-            </div>
-            <p class="step-card__desc">${round.desc}</p>
-            ${round.aiTip ? `
-              <div class="step-card__ai-tip">
-                <span class="step-card__ai-tip-label">💡 AI Tip:</span>
-                <span>${round.aiTip}</span>
-              </div>
-            ` : ''}
-            ${status === 'active' ? `
-              <div class="step-card__actions">
-                ${round.hasForm ? `
-                  <button class="btn btn-primary btn-sm" onclick="openAXPhaseForm('${round.phaseId}', ${stepNum})">
-                    📝 작성하기
-                  </button>
-                  <button class="btn btn-ghost btn-sm" onclick="completeStep(${stepNum})" style="margin-left:6px;">
-                    ✅ 완료
-                  </button>
-                ` : `
-                  <button class="btn btn-primary btn-sm" onclick="completeStep(${stepNum})">
-                    ✅ 이 단계 완료
-                  </button>
-                `}
-              </div>
-            ` : ''}
-            ${(status === 'completed' && round.hasForm) ? `
-              <div class="step-card__actions">
-                <button class="btn btn-ghost btn-sm" onclick="openAXPhaseForm('${round.phaseId}', ${stepNum})">
-                  📖 다시 보기 / 수정
-                </button>
-              </div>
-            ` : ''}
-            ${(status === 'locked' && round.hasForm) ? `
-              <div class="step-card__actions">
-                <button class="btn btn-ghost btn-sm" onclick="openAXPhaseForm('${round.phaseId}', ${stepNum})" style="opacity:0.7;" title="늦게 합류한 경우 미리 작성 가능">
-                  ✍️ 먼저 작성
-                </button>
-              </div>
-            ` : ''}
-          </div>
-        </div>
+        <button class="step-tab step-tab--${status} ${isActiveTab ? 'step-tab--current' : ''}" data-step="${stepNum}" data-tab-index="${index}">
+          <span class="step-tab__num">STEP ${String(stepNum).padStart(2, '0')}</span>
+          <span class="step-tab__name">${round.icon || ''} ${round.name}</span>
+          <span class="step-tab__status">${
+            status === 'completed' ? '✓ 완료' :
+            status === 'active' ? '● 진행 중' :
+            '🔒 잠김'
+          }</span>
+        </button>
       `;
-    }).join('');
+    }).join('') + `
+      <button class="step-tab ${currentStep > rounds.length ? 'step-tab--active' : 'step-tab--locked'} ${activeTabIndex === rounds.length ? 'step-tab--current' : ''}" data-step="${rounds.length + 1}" data-tab-index="${rounds.length}">
+        <span class="step-tab__num">FINAL</span>
+        <span class="step-tab__name">📤 결과물 제출</span>
+        <span class="step-tab__status">${currentStep > rounds.length ? '제출 가능' : '단계 완료 후'}</span>
+      </button>
+    `;
+
+    // 탭 클릭 핸들러
+    tabs.querySelectorAll('.step-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const idx = parseInt(tab.dataset.tabIndex);
+        const stepNum = parseInt(tab.dataset.step);
+        // 잠긴 탭 방지 (단, 늦은 합류 모드에서는 hasForm 단계만 미리 보기 허용)
+        if (tab.classList.contains('step-tab--locked')) {
+          if (idx === rounds.length) {
+            showStepValidation(`결과물 제출은 모든 단계를 완료한 후 가능합니다. (현재 Step ${currentStep} / ${rounds.length})`);
+            return;
+          }
+          const round = rounds[idx];
+          if (!round?.hasForm) {
+            showStepValidation('이 단계는 아직 잠겨 있습니다. 이전 단계를 먼저 완료하세요.');
+            return;
+          }
+        }
+        activateTab(idx);
+      });
+    });
+
+    // 활성 탭 컨텐츠 렌더
+    activateTab(activeTabIndex, false);
+
+    // 진행률
+    const pct = Math.round(((currentStep - 1) / Math.max(1, rounds.length)) * 100);
+    const fillEl = document.getElementById('progressFill');
+    const pctEl = document.getElementById('progressPct');
+    const stepEl = document.getElementById('progressText');
+    const titleEl = document.getElementById('currentStepTitle');
+    if (fillEl) fillEl.style.width = `${Math.min(100, pct)}%`;
+    if (pctEl) pctEl.textContent = `${Math.min(100, pct)}%`;
+    if (stepEl) stepEl.textContent = `Step ${Math.min(currentStep, rounds.length)} / ${rounds.length}`;
+    if (titleEl) titleEl.textContent = (rounds[Math.min(currentStep, rounds.length) - 1]?.name) || '완료';
   }
+
+  // ── 탭 활성화 ──
+  function activateTab(index, scrollIntoView = true) {
+    const rounds = workshopData.rounds || [];
+    activeTabIndex = index;
+    const isSubmission = index === rounds.length;
+
+    // 탭 UI 갱신
+    document.querySelectorAll('.step-tab').forEach((t, i) => {
+      t.classList.toggle('step-tab--current', i === index);
+    });
+    if (scrollIntoView) {
+      const tab = document.querySelector(`.step-tab[data-tab-index="${index}"]`);
+      if (tab) tab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+
+    const pane = document.getElementById('stepPane');
+    const submission = document.getElementById('submissionSection');
+    const formContainer = document.getElementById('axPhaseFormContainer');
+    const genericBody = document.getElementById('genericStepBody');
+    const validation = document.getElementById('paneValidation');
+
+    if (validation) { validation.classList.add('hidden'); validation.innerHTML = ''; }
+
+    if (isSubmission) {
+      // 제출 탭
+      if (pane) pane.style.display = 'none';
+      if (submission) submission.classList.remove('hidden');
+      return;
+    }
+
+    // 단계 탭
+    if (pane) pane.style.display = 'block';
+    if (submission) submission.classList.add('hidden');
+
+    const stepNum = index + 1;
+    const round = rounds[index];
+    if (!round) return;
+
+    document.getElementById('paneNum').textContent = String(stepNum).padStart(2, '0');
+    document.getElementById('paneTitle').textContent = `${round.icon || ''} ${round.name}`;
+    document.getElementById('paneDesc').textContent = round.desc || '';
+    const tipEl = document.getElementById('paneTip');
+    if (round.aiTip) {
+      tipEl.style.display = 'block';
+      tipEl.innerHTML = `💡 <strong>AI Tip:</strong> ${round.aiTip}`;
+    } else {
+      tipEl.style.display = 'none';
+    }
+
+    // 필수/옵션 배지
+    const badge = document.getElementById('paneRequired');
+    const isRequired = round.hasForm; // 폼 있는 단계 = 필수
+    badge.textContent = isRequired ? '필수' : '선택';
+    badge.className = 'step-pane__badge ' + (isRequired ? 'required' : 'optional');
+
+    // 폼 컨테이너 / 일반 단계 분기
+    if (round.hasForm && round.phaseId) {
+      formContainer.classList.remove('hidden');
+      genericBody.classList.add('hidden');
+      // ax-phases.js의 폼 렌더링 호출
+      if (typeof openAXPhaseForm === 'function') openAXPhaseForm(round.phaseId, stepNum);
+    } else {
+      formContainer.classList.add('hidden');
+      formContainer.innerHTML = '';
+      genericBody.classList.remove('hidden');
+      // generic 완료 버튼은 현재 step에서만 활성
+      const genBtn = document.getElementById('genericCompleteBtn');
+      if (genBtn) {
+        const isCurrent = stepNum === (currentTeam.currentStep || 1);
+        genBtn.disabled = !isCurrent;
+        genBtn.textContent = isCurrent ? '✅ 단계 완료' : (stepNum < (currentTeam.currentStep || 1) ? '✓ 완료된 단계' : '🔒 아직 진행할 수 없음');
+        genBtn.onclick = isCurrent ? () => completeStep(stepNum) : null;
+      }
+    }
+
+    // 이전/다음 버튼 상태
+    const prevBtn = document.getElementById('prevStepBtn');
+    const nextBtn = document.getElementById('nextStepBtn');
+    if (prevBtn) {
+      prevBtn.disabled = index === 0;
+      prevBtn.onclick = () => activateTab(Math.max(0, index - 1));
+    }
+    if (nextBtn) {
+      const isLast = index >= rounds.length;
+      nextBtn.textContent = isLast ? '결과물 제출 →' : '다음 단계 →';
+      nextBtn.onclick = () => handleNextClick(index);
+    }
+  }
+
+  // ── 다음 버튼: 검증 + 단계 완료 + 탭 이동 ──
+  async function handleNextClick(index) {
+    const rounds = workshopData.rounds || [];
+    const stepNum = index + 1;
+    const round = rounds[index];
+    const isCurrentStep = stepNum === (currentTeam.currentStep || 1);
+
+    // 현재 진행 step일 때만 완료 처리
+    if (isCurrentStep && round) {
+      if (round.hasForm) {
+        // 필수 폼 검증
+        const validation = validateRequiredFields();
+        if (!validation.ok) {
+          showStepValidation(`<strong>입력 누락:</strong> ${validation.message}`);
+          return;
+        }
+      }
+      await completeStep(stepNum);
+    }
+
+    // 탭 이동
+    if (index + 1 <= rounds.length) {
+      activateTab(index + 1);
+    }
+  }
+
+  // ── 필수 필드 검증 (현재 폼 컨테이너 내부) ──
+  function validateRequiredFields() {
+    const container = document.getElementById('axPhaseFormContainer');
+    if (!container) return { ok: true };
+    const inputs = container.querySelectorAll('input[required], textarea[required], select[required]');
+    if (inputs.length === 0) {
+      // required 마킹이 없으면 모든 텍스트/숫자 입력 중 비어 있는지 점검 (관대)
+      const all = container.querySelectorAll('input[type="text"], input[type="number"], textarea');
+      const filled = Array.from(all).filter(el => (el.value || '').trim() !== '').length;
+      if (all.length > 0 && filled / all.length < 0.5) {
+        return { ok: false, message: `${all.length}개 항목 중 ${filled}개만 작성됨. 절반 이상 작성 후 진행하세요.` };
+      }
+      return { ok: true };
+    }
+    const empty = Array.from(inputs).filter(el => (el.value || '').trim() === '');
+    if (empty.length > 0) {
+      const labels = empty.slice(0, 3).map(el => el.closest('label')?.textContent || el.name || '항목').join(', ');
+      return { ok: false, message: `${empty.length}개 필수 항목 미작성 (예: ${labels})` };
+    }
+    return { ok: true };
+  }
+
+  function showStepValidation(html) {
+    const v = document.getElementById('paneValidation');
+    if (!v) return;
+    v.innerHTML = html;
+    v.classList.remove('hidden');
+    v.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // 탭 스크롤 버튼
+  document.addEventListener('DOMContentLoaded', () => {
+    const left = document.getElementById('tabsScrollLeft');
+    const right = document.getElementById('tabsScrollRight');
+    const tabs = document.getElementById('stepTabs');
+    if (left && tabs) left.onclick = () => tabs.scrollBy({ left: -200, behavior: 'smooth' });
+    if (right && tabs) right.onclick = () => tabs.scrollBy({ left: 200, behavior: 'smooth' });
+  });
 
   // ── AX Summary ──
   async function showAXSummary() {
@@ -380,7 +545,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('axPhaseFormContainer');
     if (!container) return;
     container.classList.remove('hidden');
-    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // 탭 시스템에서는 활성 탭 컨텐츠 영역으로 부드럽게 스크롤 (폼 시작점 X, 헤더 보존)
+    const pane = document.getElementById('stepPane');
+    if (pane) pane.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     const memberId = sessionStorage.getItem('memberName') || currentTeam?.members?.[0] || 'participant';
     const context = {
@@ -465,8 +632,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (round?.hasForm && round.phaseId) {
       const memberId = sessionStorage.getItem('memberName') || currentTeam?.members?.[0] || 'participant';
       completePhaseResponse(workshopData.id, currentTeam.id, memberId, round.phaseId);
-      const formContainer = document.getElementById('axPhaseFormContainer');
-      if (formContainer) formContainer.classList.add('hidden');
     }
 
     // 전체 완료 시 요약 뷰

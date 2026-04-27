@@ -1,6 +1,267 @@
 /* ═══════════════════════════════════════════════════════════
-   Dashboard — FLOW~ AX Workshop v4 (Dark Premium)
+   Dashboard — FLOW~ AX Workshop v5 (Tab-based · 가독성 강화)
    ═══════════════════════════════════════════════════════════ */
+
+/* ─── 가독성 위계 토큰 (이 화면 한정) ─── */
+.sprint-v2 {
+  --d-display: 32px;       /* 단계 제목 */
+  --d-h2: 22px;            /* 섹션 제목 */
+  --d-h3: 17px;            /* 서브 섹션 */
+  --d-body: 15px;          /* 본문 */
+  --d-caption: 13px;       /* 메타 */
+  --d-tiny: 11px;          /* 라벨 */
+  --d-line-tight: 1.25;
+  --d-line-body: 1.6;
+}
+
+/* ─── Sprint Section v2 ─── */
+.sprint-v2 {
+  background: var(--c-bg-surface);
+  border: 1px solid var(--b-default);
+  border-radius: var(--r-xl);
+  padding: 0;
+  margin-bottom: var(--s-2xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+/* ── Progress bar (sticky) ── */
+.sprint-progress-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-lg);
+  padding: 16px 24px;
+  background: linear-gradient(135deg, rgba(107,92,229,0.08), rgba(255,185,156,0.06));
+  border-bottom: 1px solid var(--b-default);
+  position: sticky; top: 72px; z-index: 5;
+  backdrop-filter: blur(12px);
+}
+.sprint-progress-bar__info { display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1; }
+.sprint-progress-bar__step {
+  font-family: var(--ff-heading);
+  font-size: 12px; font-weight: 700; letter-spacing: 1px;
+  color: var(--c-primary); text-transform: uppercase;
+  background: rgba(107,92,229,0.12);
+  padding: 6px 12px; border-radius: 999px;
+  white-space: nowrap;
+}
+.sprint-progress-bar__title {
+  font-size: 16px; font-weight: 600; color: var(--t-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sprint-progress-bar__bar { display: flex; align-items: center; gap: 12px; min-width: 220px; }
+.sprint-progress-bar__bar .progress-bar { width: 180px; height: 8px; background: rgba(107,92,229,0.12); border-radius: 4px; overflow: hidden; }
+.sprint-progress-bar__bar .progress-bar__fill { height: 100%; background: var(--grad-accent); transition: width 0.4s ease; border-radius: 4px; }
+.sprint-progress-bar__pct { font-weight: 700; font-size: 14px; color: var(--c-primary); min-width: 42px; text-align: right; }
+
+/* ── Tab Navigation ── */
+.step-tabs-wrap {
+  display: flex; align-items: stretch;
+  border-bottom: 1px solid var(--b-default);
+  background: var(--c-bg-surface);
+  position: relative;
+}
+.step-tabs__scroll {
+  background: transparent; border: none; padding: 0 16px;
+  font-size: 28px; color: var(--t-muted); cursor: pointer;
+  transition: color 0.2s; flex-shrink: 0;
+}
+.step-tabs__scroll:hover { color: var(--c-primary); background: var(--c-bg-hover); }
+.step-tabs {
+  display: flex; flex: 1; gap: 0;
+  overflow-x: auto; scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+.step-tabs::-webkit-scrollbar { display: none; }
+
+.step-tab {
+  flex: 1 0 auto; min-width: 160px;
+  padding: 16px 18px; border: none; background: transparent;
+  cursor: pointer; transition: all 0.25s;
+  text-align: left; border-right: 1px solid var(--b-subtle);
+  position: relative;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.step-tab:hover:not(.step-tab--locked) { background: var(--c-bg-hover); }
+.step-tab__num {
+  font-family: var(--ff-heading);
+  font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+  color: var(--t-muted); text-transform: uppercase;
+}
+.step-tab__name {
+  font-size: 14px; font-weight: 600; color: var(--t-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.step-tab__status {
+  font-size: 10px; color: var(--t-faint); margin-top: 2px;
+  display: flex; align-items: center; gap: 4px;
+}
+
+/* 탭 상태 */
+.step-tab--completed .step-tab__num { color: var(--c-success); }
+.step-tab--completed .step-tab__status { color: var(--c-success); font-weight: 600; }
+.step-tab--completed::before {
+  content: '✓'; position: absolute; top: 12px; right: 12px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--c-success); color: white;
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.step-tab--active {
+  background: var(--c-bg-surface);
+  box-shadow: inset 0 -3px 0 var(--c-primary);
+}
+.step-tab--active .step-tab__num { color: var(--c-primary); }
+.step-tab--active .step-tab__name { color: var(--c-primary-d); font-weight: 700; }
+.step-tab--active .step-tab__status { color: var(--c-primary); font-weight: 600; }
+
+.step-tab--locked { opacity: 0.5; cursor: not-allowed; }
+.step-tab--locked .step-tab__name { color: var(--t-muted); }
+.step-tab--locked::before {
+  content: '🔒'; position: absolute; top: 12px; right: 12px; font-size: 12px;
+}
+
+.step-tab--recommended {
+  background: linear-gradient(135deg, rgba(107,92,229,0.06), rgba(255,185,156,0.06));
+  animation: tabRecommend 2.4s ease-out 2;
+}
+@keyframes tabRecommend {
+  0%   { box-shadow: inset 0 -3px 0 rgba(107,92,229,0.6), 0 0 0 0 rgba(107,92,229,0.4); }
+  60%  { box-shadow: inset 0 -3px 0 rgba(107,92,229,0.6), 0 0 0 12px rgba(107,92,229,0); }
+  100% { box-shadow: inset 0 -3px 0 rgba(107,92,229,0.6); }
+}
+
+/* ── Step Pane (활성 탭 컨텐츠) ── */
+.step-pane { padding: 32px; background: var(--c-bg-surface); }
+
+.step-pane__header {
+  display: flex; align-items: flex-start; gap: 20px;
+  padding-bottom: 20px; border-bottom: 1px solid var(--b-subtle);
+  margin-bottom: 24px;
+}
+.step-pane__num {
+  font-family: var(--ff-heading);
+  font-size: 48px; font-weight: 800; line-height: 1;
+  background: var(--grad-accent);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  flex-shrink: 0;
+  letter-spacing: -2px;
+}
+.step-pane__title-wrap { flex: 1; min-width: 0; }
+.step-pane__title {
+  font-family: var(--ff-heading);
+  font-size: 28px; font-weight: 700; line-height: 1.2;
+  color: var(--t-primary); margin: 0 0 8px;
+  letter-spacing: -0.5px;
+}
+.step-pane__desc {
+  font-size: 15px; line-height: 1.6; color: var(--t-secondary);
+  margin: 0; max-width: 70ch;
+}
+.step-pane__badge {
+  flex-shrink: 0; padding: 6px 12px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.step-pane__badge.required {
+  background: rgba(229,104,107,0.12); color: var(--c-danger);
+  border: 1px solid rgba(229,104,107,0.3);
+}
+.step-pane__badge.optional {
+  background: rgba(125,211,176,0.12); color: var(--c-success);
+  border: 1px solid rgba(125,211,176,0.3);
+}
+
+.step-pane__tip {
+  background: linear-gradient(135deg, #FFF3C8, #FFE4D6);
+  border: 1px solid rgba(232,168,74,0.25);
+  border-left: 4px solid var(--c-warning);
+  padding: 14px 18px; border-radius: var(--r-md);
+  margin-bottom: 24px;
+  font-size: 14px; line-height: 1.5; color: #6B5800;
+  font-weight: 500;
+}
+
+.step-pane__form { min-height: 200px; }
+
+/* 일반 워크샵 (폼 없는) 단계용 */
+.generic-step-actions {
+  text-align: center; padding: 40px 20px;
+  background: var(--c-bg-subtle); border-radius: var(--r-lg);
+  border: 1px dashed var(--b-default);
+}
+.generic-step-actions__hint {
+  font-size: 14px; color: var(--t-secondary);
+  margin-bottom: 20px;
+}
+
+/* 검증 안내 */
+.step-pane__validation {
+  background: rgba(229,104,107,0.08);
+  border: 1px solid rgba(229,104,107,0.3);
+  border-left: 4px solid var(--c-danger);
+  padding: 14px 18px; border-radius: var(--r-md);
+  margin: 16px 0;
+  font-size: 14px; line-height: 1.5; color: var(--c-danger);
+  font-weight: 500;
+}
+.step-pane__validation strong { color: #B43A3D; }
+
+/* 하단 네비게이션 */
+.step-pane__nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 32px; padding-top: 24px;
+  border-top: 1px solid var(--b-subtle);
+  gap: 16px;
+}
+.step-pane__nav .btn {
+  font-size: 15px; font-weight: 600;
+  padding: 14px 24px; min-width: 160px;
+}
+.step-pane__nav .btn:disabled {
+  opacity: 0.4; cursor: not-allowed;
+}
+.step-pane__nav-status {
+  flex: 1; text-align: center;
+  font-size: 13px; color: var(--t-muted);
+}
+.step-pane__autosave {
+  display: inline-block;
+}
+
+/* 필수 표시 */
+.required-mark {
+  color: var(--c-danger); font-weight: 700; margin-left: 2px;
+  font-size: 1.1em;
+}
+
+/* 제출 섹션 헤더 강화 */
+.submission-section__header { margin-bottom: 24px; }
+.submission-section__header h2 {
+  font-size: 24px; font-weight: 700;
+  color: var(--t-primary); margin-bottom: 6px;
+}
+.submission-section__hint {
+  font-size: 14px; color: var(--t-secondary);
+  margin: 0;
+}
+.submission-section .form-group label { font-weight: 600; }
+
+/* 모바일 대응 */
+@media (max-width: 768px) {
+  .step-pane { padding: 20px 16px; }
+  .step-pane__header { flex-direction: column; gap: 12px; }
+  .step-pane__num { font-size: 36px; }
+  .step-pane__title { font-size: 22px; }
+  .step-pane__desc { font-size: 14px; }
+  .step-pane__nav { flex-direction: column; gap: 12px; }
+  .step-pane__nav .btn { width: 100%; min-width: 0; }
+  .step-pane__nav-status { order: 3; width: 100%; }
+  .sprint-progress-bar { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 16px; }
+  .sprint-progress-bar__bar { width: 100%; min-width: 0; }
+  .sprint-progress-bar__bar .progress-bar { flex: 1; }
+  .step-tab { min-width: 130px; padding: 12px 14px; }
+}
 
 /* 강사 라운드 브로드캐스트 — 추천 step 강조 */
 .step-card--recommended {

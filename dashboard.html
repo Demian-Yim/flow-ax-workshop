@@ -107,43 +107,85 @@
           </div>
         </div>
 
-        <!-- Sprint Guide -->
-        <div class="sprint-section">
-          <div class="sprint-header">
-            <h2>🚀 스프린트 진행</h2>
-            <div class="sprint-progress">
-              <span class="sprint-progress__text" id="progressText">Step 1 / 5</span>
-              <div class="progress-bar" style="width:200px;">
-                <div class="progress-bar__fill" id="progressFill" style="width:20%"></div>
+        <!-- Sprint Guide — 탭 기반 좌우 흐름 -->
+        <div class="sprint-section sprint-v2">
+
+          <!-- 진행률 표시 (sticky 상단) -->
+          <div class="sprint-progress-bar">
+            <div class="sprint-progress-bar__info">
+              <span class="sprint-progress-bar__step" id="progressText">Step 1 / 5</span>
+              <span class="sprint-progress-bar__title" id="currentStepTitle">단계 진행 중</span>
+            </div>
+            <div class="sprint-progress-bar__bar">
+              <div class="progress-bar"><div class="progress-bar__fill" id="progressFill" style="width:20%"></div></div>
+              <span class="sprint-progress-bar__pct" id="progressPct">20%</span>
+            </div>
+          </div>
+
+          <!-- 탭 네비게이션 -->
+          <div class="step-tabs-wrap">
+            <button class="step-tabs__scroll" id="tabsScrollLeft" aria-label="left">‹</button>
+            <div class="step-tabs" id="stepTabs" role="tablist">
+              <!-- Dynamically generated -->
+            </div>
+            <button class="step-tabs__scroll" id="tabsScrollRight" aria-label="right">›</button>
+          </div>
+
+          <!-- 활성 탭 컨텐츠 -->
+          <div class="step-pane" id="stepPane">
+            <div class="step-pane__header">
+              <div class="step-pane__num" id="paneNum">1</div>
+              <div class="step-pane__title-wrap">
+                <h2 class="step-pane__title" id="paneTitle">단계 제목</h2>
+                <p class="step-pane__desc" id="paneDesc">단계 설명</p>
+              </div>
+              <span class="step-pane__badge" id="paneRequired">필수</span>
+            </div>
+            <div class="step-pane__tip" id="paneTip">💡 AI Tip 표시 영역</div>
+
+            <!-- AX Phase Form Container — 폼이 여기에 렌더링됨 -->
+            <div id="axPhaseFormContainer" class="step-pane__form"></div>
+
+            <!-- 일반 워크샵 (해커톤/바이브코딩) — 폼 없는 단계용 -->
+            <div id="genericStepBody" class="hidden">
+              <div class="generic-step-actions">
+                <p class="generic-step-actions__hint">이 단계가 끝나면 ✅ 단계 완료를 눌러 다음으로 진행하세요.</p>
+                <button class="btn btn-primary btn-lg" id="genericCompleteBtn">✅ 단계 완료</button>
               </div>
             </div>
-          </div>
 
-          <!-- Steps Timeline -->
-          <div class="steps-timeline" id="stepsTimeline">
-            <!-- Dynamically generated -->
-          </div>
+            <!-- 검증 안내 -->
+            <div class="step-pane__validation hidden" id="paneValidation"></div>
 
-          <!-- AX Phase Form Container -->
-          <div id="axPhaseFormContainer" class="hidden"></div>
-          <div id="axAutoSaveStatus"></div>
+            <!-- 좌우 네비게이션 -->
+            <div class="step-pane__nav">
+              <button class="btn btn-ghost btn-lg" id="prevStepBtn">← 이전 단계</button>
+              <div class="step-pane__nav-status" id="paneStatus">
+                <span class="step-pane__autosave" id="axAutoSaveStatus"></span>
+              </div>
+              <button class="btn btn-primary btn-lg" id="nextStepBtn">다음 단계 →</button>
+            </div>
+          </div>
         </div>
 
-        <!-- Submission Section -->
-        <div class="submission-section" id="submissionSection">
-          <h2>📤 결과물 제출</h2>
+        <!-- Submission Tab Content (마지막 탭) -->
+        <div class="submission-section hidden" id="submissionSection">
+          <div class="submission-section__header">
+            <h2>📤 결과물 제출</h2>
+            <p class="submission-section__hint">모든 단계를 완료한 뒤 제출해주세요. <span class="required-mark">★</span> = 필수</p>
+          </div>
           <div class="submission-grid">
             <div class="form-group">
-              <label>서비스/프로젝트 이름</label>
-              <input type="text" id="subServiceName" placeholder="예: AI 리더십 진단">
+              <label>서비스/프로젝트 이름 <span class="required-mark">★</span></label>
+              <input type="text" id="subServiceName" placeholder="예: AI 리더십 진단" required>
             </div>
             <div class="form-group">
-              <label>한 줄 소개</label>
-              <input type="text" id="subTagline" placeholder="예: 설문이 아닌, 대화로 당신의 리더십을 진단합니다">
+              <label>한 줄 소개 <span class="required-mark">★</span></label>
+              <input type="text" id="subTagline" placeholder="예: 설문이 아닌, 대화로 당신의 리더십을 진단합니다" required>
             </div>
             <div class="form-group" style="grid-column: 1 / -1;">
-              <label>서비스 설명</label>
-              <textarea id="subDescription" placeholder="서비스의 목적, 대상, 핵심 기능을 설명해주세요"></textarea>
+              <label>서비스 설명 <span class="required-mark">★</span></label>
+              <textarea id="subDescription" placeholder="서비스의 목적, 대상, 핵심 기능을 설명해주세요" required></textarea>
             </div>
             <div class="form-group">
               <label>🌐 앱 링크 (배포된 URL)</label>
