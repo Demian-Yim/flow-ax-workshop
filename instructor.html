@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FLOW~ AX Workshop 강사·운영자 통합 대시보드 — 한 화면에서 팀 진행도, 결과물, 평가까지">
+  <title>강사 대시보드 | FLOW~ AX Workshop</title>
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/instructor.css">
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+</head>
+<body>
+  <div class="aura-bg"></div>
+
+  <!-- ═══ Navbar ═══ -->
+  <nav class="navbar" id="navbar">
+    <div class="navbar__brand">
+      <div class="navbar__logo">F~</div>
+      <div>
+        <div class="navbar__title">강사·운영자 통합 대시보드</div>
+        <div class="navbar__subtitle"><span id="liveDot" style="color:var(--c-secondary);font-weight:600;">● LIVE</span> · <span id="navWsName">워크샵 선택 필요</span></div>
+      </div>
+    </div>
+    <div class="navbar__actions">
+      <select id="wsSelector" class="instructor-select">
+        <option value="">워크샵 선택...</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="window.location.href='admin.html'">⚙️ Admin</button>
+      <button class="btn btn-ghost btn-sm" onclick="window.location.href='index.html'">🏠 홈</button>
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">로그아웃</button>
+    </div>
+  </nav>
+
+  <!-- ═══ Layout: 좌측 팀 리스트 + 우측 상세 ═══ -->
+  <div class="instructor-layout">
+
+    <!-- ── 좌측: KPI 카드 + 팀 그리드 ── -->
+    <aside class="instructor-side">
+      <!-- KPI 한눈에 -->
+      <div class="instructor-kpi">
+        <div class="kpi-tile"><div class="kpi-tile__num" id="kpiTeams">0</div><div class="kpi-tile__label">팀</div></div>
+        <div class="kpi-tile"><div class="kpi-tile__num" id="kpiMembers">0</div><div class="kpi-tile__label">참가자</div></div>
+        <div class="kpi-tile"><div class="kpi-tile__num" id="kpiSubmitted">0</div><div class="kpi-tile__label">제출</div></div>
+        <div class="kpi-tile kpi-tile--accent"><div class="kpi-tile__num" id="kpiAvgProg">0%</div><div class="kpi-tile__label">평균 진행도</div></div>
+      </div>
+
+      <!-- 라운드 컨트롤 -->
+      <div class="instructor-round-ctl">
+        <button class="btn btn-ghost btn-sm" id="prevRoundBtn">◀ 이전</button>
+        <div class="instructor-round-ctl__info">
+          <span class="instructor-round-ctl__label">현재 라운드</span>
+          <span class="instructor-round-ctl__num" id="currentRoundNum">- / -</span>
+          <span class="instructor-round-ctl__name" id="currentRoundName">단계 미선택</span>
+        </div>
+        <button class="btn btn-primary btn-sm" id="nextRoundBtn">다음 ▶</button>
+      </div>
+
+      <!-- 팀 카드 리스트 -->
+      <div class="instructor-team-list" id="teamList">
+        <div class="empty-state empty-state--small">
+          <div class="empty-state__icon">📊</div>
+          <div class="empty-state__title">워크샵을 선택하세요</div>
+          <p>좌상단 드롭다운에서 운영 중인 워크샵을 골라주세요.</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── 우측: 선택된 팀 상세 ── -->
+    <main class="instructor-main">
+      <!-- 헤더 -->
+      <div class="instructor-detail-header" id="detailHeader" style="display:none;">
+        <div class="instructor-detail-header__info">
+          <h1 id="detailTeamName">팀 선택됨</h1>
+          <div class="instructor-detail-header__meta">
+            <span class="badge badge-primary" id="detailStep">STEP 1</span>
+            <span id="detailMembers">팀원 - 명</span>
+            <span id="detailProgress">0%</span>
+            <span id="detailPin">PIN -</span>
+          </div>
+        </div>
+        <div class="instructor-detail-header__actions">
+          <button class="btn btn-ghost btn-sm" id="prevTeamBtn">← 이전 팀</button>
+          <button class="btn btn-ghost btn-sm" id="nextTeamBtn">다음 팀 →</button>
+        </div>
+      </div>
+
+      <!-- 탭 -->
+      <div class="instructor-detail-tabs" id="detailTabs" style="display:none;">
+        <button class="instructor-tab instructor-tab--active" data-tab="progress">📊 진행 현황</button>
+        <button class="instructor-tab" data-tab="submission">📤 결과물</button>
+        <button class="instructor-tab" data-tab="peer">🌟 동료 평가</button>
+        <button class="instructor-tab" data-tab="instructor">✍️ 강사 평가</button>
+      </div>
+
+      <!-- 탭 컨텐츠 -->
+      <div class="instructor-detail-body" id="detailBody">
+        <div class="empty-state">
+          <div class="empty-state__icon">👈</div>
+          <div class="empty-state__title">왼쪽에서 팀을 선택하세요</div>
+          <p>팀 카드를 클릭하면 진행 현황·결과물·평가를 한 번에 볼 수 있습니다.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/instructor.js"></script>
+</body>
+</html>

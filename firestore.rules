@@ -68,5 +68,92 @@ service cloud.firestore {
       allow read: if true;
       allow write: if request.auth != null;
     }
+
+    // ── AX Readiness Diagnostic ─────────────────────────────
+    // 5-axis self-diagnostic for B2B prospects
+    // diagnosticId is a 24-char nanoid → URL token = read auth
+    match /axDiagnostics/{diagnosticId} {
+      allow read: if true;
+      allow create: if request.resource.data.diagnosticId is string
+                    && request.resource.data.company.name is string
+                    && request.resource.data.company.name.size() > 0
+                    && request.resource.data.company.name.size() <= 100
+                    && request.resource.data.scores.knowledge in [1,2,3,4]
+                    && request.resource.data.scores.multisite in [1,2,3,4]
+                    && request.resource.data.scores.repetitive in [1,2,3,4]
+                    && request.resource.data.scores.dataGap in [1,2,3,4]
+                    && request.resource.data.scores.shadowAI in [1,2,3,4]
+                    && request.resource.data.riskLevel in ['LOW', 'MEDIUM', 'HIGH'];
+      allow update, delete: if false; // immutable once created
+    }
+
+    // ── EARS — Project (consulting engagement) ──────────────
+    match /earsProjects/{projectId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.client is string
+                            && request.resource.data.client.size() > 0
+                            && request.resource.data.client.size() <= 100;
+      allow delete: if false;
+    }
+
+    // ── EARS — Champion EOD daily entries ───────────────────
+    // Immutable once created (audit trail integrity)
+    match /earsEntries/{entryId} {
+      allow read: if true;
+      allow create: if request.resource.data.projectId is string
+                    && request.resource.data.championId is string
+                    && request.resource.data.date is string
+                    && request.resource.data.effectiveness.minutesSaved is number
+                    && request.resource.data.effectiveness.minutesSaved >= 0
+                    && request.resource.data.effectiveness.minutesSaved <= 600
+                    && request.resource.data.effectiveness.deliverables is number
+                    && request.resource.data.effectiveness.deliverables >= 0
+                    && request.resource.data.effectiveness.deliverables <= 50
+                    && request.resource.data.effectiveness.quality in [1,2,3,4,5]
+                    && request.resource.data.relevance.pilotAlignment in [1,2,3,4,5];
+      allow update, delete: if false;
+    }
+
+    // ── EARS — Weekly anonymous survey from staff ──────────
+    match /earsSurveys/{surveyId} {
+      allow read: if true;
+      allow create: if request.resource.data.projectId is string
+                    && request.resource.data.weekNum is number
+                    && request.resource.data.weekNum >= 1
+                    && request.resource.data.weekNum <= 8
+                    && request.resource.data.alignment.aiAware in [1,2,3,4,5]
+                    && request.resource.data.alignment.aiUseful in [1,2,3,4,5]
+                    && request.resource.data.alignment.aiSafe in [1,2,3,4,5]
+                    && request.resource.data.alignment.leaderSupport in [1,2,3,4,5]
+                    && request.resource.data.alignment.futureWilling in [1,2,3,4,5];
+      allow update, delete: if false;
+    }
+
+    // ── EARS — 1:1 coaching notes (facilitator-authored) ───
+    match /earsCoaching/{coachingId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.projectId is string
+                            && request.resource.data.championId is string
+                            && request.resource.data.sessionNum is number;
+      allow delete: if false;
+    }
+
+    // ── Peer Reviews (참가자 간 결과물 평가) ──
+    match /peerReviews/{reviewId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.workshopId is string
+                              && request.resource.data.reviewerId is string
+                              && request.resource.data.teamId is string
+                              && request.resource.data.scores is map;
+      allow delete: if true;
+    }
+
+    // ── Instructor Evaluations (강사가 팀 결과물 평가) ──
+    match /instructorEvaluations/{evalId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.workshopId is string
+                              && request.resource.data.teamId is string;
+      allow delete: if true;
+    }
   }
 }

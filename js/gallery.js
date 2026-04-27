@@ -9,6 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentFilter = 'all';
 
   // ── Collect all projects from all workshops ──
+  let peerStatsCache = {}; // teamId -> {count, avg}
+
   function getAllProjects() {
     const projects = [];
     workshops.forEach(ws => {
@@ -16,15 +18,28 @@ document.addEventListener('DOMContentLoaded', () => {
         if (team.submission) {
           projects.push({
             ...team,
+            workshopId: ws.id,
             workshopType: ws.type,
             workshopName: ws.name,
             votes: team.votes || 0,
+            peerStats: peerStatsCache[team.id] || null,
           });
         }
       });
     });
     return projects;
   }
+
+  // 피어 평균 점수 일괄 조회 후 갱신
+  window.refreshPeerScores = async function() {
+    if (typeof window.fetchTeamPeerStats !== 'function') return;
+    const projects = getAllProjects();
+    await Promise.all(projects.map(async p => {
+      const stats = await window.fetchTeamPeerStats(p.workshopId, p.id);
+      if (stats) peerStatsCache[p.id] = stats;
+    }));
+    renderGallery();
+  };
 
   // ── Random Project Icons ──
   const projectIcons = ['💡', '🚀', '🔬', '🎯', '⚡', '🌟', '🧠', '🎨', '🔮', '🌊', '🦾', '🎪'];
@@ -67,11 +82,14 @@ document.addEventListener('DOMContentLoaded', () => {
         'ax-redesign': 'linear-gradient(135deg, rgba(225, 112, 85, 0.2), rgba(250, 177, 160, 0.1))',
       };
 
+      const peerAvg = project.peerStats?.avg ? `⭐ ${project.peerStats.avg.toFixed(1)}` : '';
+      const peerCount = project.peerStats?.count ? `(${project.peerStats.count})` : '';
       return `
         <div class="project-card" data-type="${project.workshopType}" data-team-id="${project.id}">
           <div class="project-card__visual" style="background: ${gradients[project.workshopType] || gradients['hackathon']}">
             ${rank ? `<div class="project-card__rank">#${rank}</div>` : ''}
             <div class="project-card__icon">${icon}</div>
+            ${peerAvg ? `<div class="project-card__peer-badge">${peerAvg} ${peerCount}</div>` : ''}
           </div>
           <div class="project-card__body">
             <div class="project-card__team">${project.name}</div>
@@ -80,10 +98,13 @@ document.addEventListener('DOMContentLoaded', () => {
               ${project.submission.tagline ? `"${project.submission.tagline}"` : ''}
               ${project.submission.description ? `<br>${project.submission.description}` : ''}
             </p>
-            
+
             <div class="project-card__footer">
               <button class="vote-btn ${isVoted ? 'voted' : ''}" onclick="toggleVote('${project.id}')">
                 ❤️ <span class="vote-count">${project.votes || 0}</span>
+              </button>
+              <button class="peer-review-btn" onclick='openPeerReview(${JSON.stringify(project.workshopId || '').replace(/'/g, "&apos;")}, ${JSON.stringify(project.id).replace(/'/g, "&apos;")}, ${JSON.stringify(project.name).replace(/'/g, "&apos;")}, ${JSON.stringify(project.submission.serviceName || '').replace(/'/g, "&apos;")})'>
+                🌟 평가하기
               </button>
               <div class="project-card__actions">
                 ${project.submission.appLink ? `
@@ -239,10 +260,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initFirebase();
   renderGallery();
   syncFromFirestore().then(() => {
-    // 초기 sync 완료 후 실시간 투표 구독 시작
     subscribeToVotes();
+    if (typeof window.refreshPeerScores === 'function') window.refreshPeerScores();
   }).catch(() => {
-    // sync 실패해도 로컬 데이터로 구독 시도
     subscribeToVotes();
   });
 });
