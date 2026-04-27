@@ -12,15 +12,24 @@ const AXAdmin = (() => {
     { id: 'phase-5', name: 'EARS 대시보드', icon: '📈' },
   ];
 
+  // ── 현재 라운드 fetch (강사 진행 통제 표시용) ──
+  async function getCurrentRound(workshopId) {
+    try {
+      if (typeof db === 'undefined' || !db) return 0;
+      const doc = await db.collection('workshops').doc(workshopId).get();
+      if (doc.exists) return doc.data().currentRound || 1;
+    } catch (err) { /* offline */ }
+    return 0;
+  }
+
   // ── 메인 렌더러 ──
   async function renderAXMonitoring(workshopId, container) {
     container.innerHTML = '<div class="ax-admin-loading">📊 AX 응답 취합 중...</div>';
 
-    const teamResponses = await getAllTeamResponses(workshopId);
-    if (!teamResponses.length) {
-      container.innerHTML = '<div class="ax-admin-empty">아직 참가자 응답이 없습니다.</div>';
-      return;
-    }
+    const [teamResponses, currentRound] = await Promise.all([
+      getAllTeamResponses(workshopId),
+      getCurrentRound(workshopId),
+    ]);
 
     const allResponses = [];
     teamResponses.forEach(({ team, responses }) => {
@@ -29,6 +38,18 @@ const AXAdmin = (() => {
         allResponses.push({ teamName: team?.name || '?', memberId: r.memberId, phaseId: r.phaseId, data: r.data, completedAt: r.completedAt });
       });
     });
+
+    if (!teamResponses.length) {
+      // 응답 없어도 라운드 표시는 보여주자
+      container.innerHTML = `
+        <div class="ax-admin">
+          <div class="ax-admin__header"><h3>📊 AX 워크숍 취합 대시보드</h3></div>
+          <div class="ax-admin__overview">${renderCompletionOverview([], [], currentRound)}</div>
+          <div class="ax-admin-empty" style="margin-top:16px;">아직 참가자 응답이 없습니다.</div>
+        </div>
+      `;
+      return;
+    }
 
     container.innerHTML = `
       <div class="ax-admin">
@@ -41,11 +62,11 @@ const AXAdmin = (() => {
         </div>
 
         <div class="ax-admin__overview">
-          ${renderCompletionOverview(allResponses, teamResponses)}
+          ${renderCompletionOverview(allResponses, teamResponses, currentRound)}
         </div>
 
         <div class="ax-admin__tabs">
-          ${PHASES.map(p => `<button class="ax-admin__tab" onclick="AXAdmin.showPhaseDetail('${p.id}', '${workshopId}')">${p.icon} ${p.name}</button>`).join('')}
+          ${PHASES.map((p, i) => `<button class="ax-admin__tab ${i + 1 === currentRound ? 'ax-admin__tab--current' : ''}" onclick="AXAdmin.showPhaseDetail('${p.id}', '${workshopId}')">${p.icon} ${p.name}${i + 1 === currentRound ? ' ●' : ''}</button>`).join('')}
         </div>
 
         <div id="axAdminPhaseDetail"></div>
@@ -54,13 +75,15 @@ const AXAdmin = (() => {
   }
 
   // ── 완료율 개요 ──
-  function renderCompletionOverview(allResponses, teamResponses) {
+  function renderCompletionOverview(allResponses, teamResponses, currentRound = 0) {
     const totalParticipants = new Set(allResponses.map(r => r.memberId)).size;
-    const phaseStats = PHASES.map(p => {
+    const phaseStats = PHASES.map((p, idx) => {
       const completed = allResponses.filter(r => r.phaseId === p.id && r.completedAt).length;
       const started = allResponses.filter(r => r.phaseId === p.id).length;
       const pct = totalParticipants > 0 ? Math.round((started / totalParticipants) * 100) : 0;
-      return { ...p, completed, started, pct };
+      const isCurrent = (idx + 1) === currentRound;
+      const isPast = (idx + 1) < currentRound;
+      return { ...p, completed, started, pct, isCurrent, isPast };
     });
 
     return `
@@ -74,7 +97,7 @@ const AXAdmin = (() => {
           <div class="ax-overview-stat__label">참가자</div>
         </div>
         ${phaseStats.map(p => `
-          <div class="ax-overview-phase">
+          <div class="ax-overview-phase ${p.isCurrent ? 'is-current' : ''} ${p.isPast ? 'is-past' : ''}">
             <div class="ax-overview-phase__icon">${p.icon}</div>
             <div class="ax-overview-phase__name">${p.name}</div>
             <div class="ax-overview-phase__bar">

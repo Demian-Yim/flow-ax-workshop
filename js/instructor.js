@@ -22,19 +22,48 @@ document.addEventListener('DOMContentLoaded', () => {
   // 1. 워크샵 목록 로드
   // ──────────────────────────────────────────
   async function loadWorkshops() {
+    const sel = document.getElementById('wsSelector');
+    sel.innerHTML = '<option value="">로드 중...</option>';
+    sel.onchange = (e) => {
+      const wsId = e.target.value;
+      if (wsId) selectWorkshop(wsId);
+    };
+
+    if (typeof db === 'undefined' || !db) {
+      sel.innerHTML = '<option value="">⚠️ Firebase 미초기화 — 새로고침 필요</option>';
+      showToast('Firebase 연결 실패. 페이지를 새로고침하세요.', 'error', 6000);
+      return;
+    }
+
     try {
-      const snap = await db.collection('workshops').where('status', '==', 'active').get();
+      // 1차: status=active 쿼리
+      const snap = await Promise.race([
+        db.collection('workshops').where('status', '==', 'active').get(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout 10s')), 10000))
+      ]);
       workshops = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const sel = document.getElementById('wsSelector');
+
+      if (workshops.length === 0) {
+        // 2차 폴백: status 필터 없이 전체 조회 (status 미설정 워크샵 포착)
+        try {
+          const all = await db.collection('workshops').limit(50).get();
+          workshops = all.docs.map(d => ({ id: d.id, ...d.data() })).filter(w => w.status !== 'archived');
+        } catch (err2) { /* keep empty */ }
+      }
+
+      if (workshops.length === 0) {
+        sel.innerHTML = '<option value="">활성 워크샵이 없습니다 — Admin에서 먼저 생성하세요</option>';
+        showToast('워크샵이 없습니다. Admin에서 워크샵을 먼저 생성하세요.', 'warning', 6000);
+        return;
+      }
+
       sel.innerHTML = '<option value="">워크샵 선택...</option>' +
-        workshops.map(w => `<option value="${w.id}">${w.name} (${w.code})</option>`).join('');
-      sel.onchange = (e) => {
-        const wsId = e.target.value;
-        if (wsId) selectWorkshop(wsId);
-      };
+        workshops.map(w => `<option value="${w.id}">${w.name || '(이름 없음)'} (${w.code || '----'})</option>`).join('');
+      showToast(`${workshops.length}개 워크샵 로드됨`, 'success', 2500);
     } catch (err) {
       console.error('워크샵 로드 실패:', err);
-      showToast('워크샵 로드 실패. 새로고침하세요.', 'error');
+      sel.innerHTML = `<option value="">❌ 로드 실패: ${err.message || err}</option>`;
+      showToast(`워크샵 로드 실패: ${err.message || err}. 새로고침하세요.`, 'error', 8000);
     }
   }
 

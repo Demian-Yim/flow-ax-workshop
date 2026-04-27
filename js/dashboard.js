@@ -296,11 +296,27 @@ document.addEventListener('DOMContentLoaded', () => {
   // ── Tab-based Step UI ──
   let activeTabIndex = 0; // 0..rounds.length (마지막은 submission)
 
+  // rounds 무결성 보장 (admin이 잘못 저장하거나 sync 시 손상된 경우 복구)
+  function ensureRounds() {
+    let rounds = workshopData.rounds;
+    const needsRecovery = !Array.isArray(rounds) || rounds.length === 0 || !rounds[0]?.name;
+    if (needsRecovery && typeof getDefaultRounds === 'function') {
+      rounds = getDefaultRounds(workshopData.type || 'hackathon');
+      workshopData.rounds = rounds;
+      sessionStorage.setItem('workshopData', JSON.stringify(workshopData));
+    }
+    return rounds || [];
+  }
+
   function renderSteps() {
     const tabs = document.getElementById('stepTabs');
-    const rounds = workshopData.rounds || [];
+    const rounds = ensureRounds();
     const currentStep = currentTeam.currentStep || 1;
     if (!tabs) return;
+    if (rounds.length === 0) {
+      tabs.innerHTML = '<div style="padding:20px;color:var(--t-muted);">단계 정보를 불러오는 중...</div>';
+      return;
+    }
 
     // 활성 탭 초기값: 현재 진행 중인 step
     if (activeTabIndex === 0 || activeTabIndex >= rounds.length + 1) {
@@ -372,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── 탭 활성화 ──
   function activateTab(index, scrollIntoView = true) {
-    const rounds = workshopData.rounds || [];
+    const rounds = ensureRounds();
     activeTabIndex = index;
     const isSubmission = index === rounds.length;
 
